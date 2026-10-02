@@ -36,7 +36,7 @@ export async function GET(
       return NextResponse.json({ error: "Storage file missing on server" }, { status: 404 });
     }
 
-    const fileBuffer = await fs.readFile(absolutePath);
+    const fileBuffer = await fs.readFile(/*turbopackIgnore: true*/ absolutePath);
     const contentType = book.mimeType || "application/pdf";
     const filename = book.fileName || `${book.title}.pdf`;
 

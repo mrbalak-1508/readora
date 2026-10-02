@@ -37,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: "Storage cover missing on server" }, { status: 404 });
     }
 
-    const fileBuffer = await fs.readFile(absolutePath);
+    const fileBuffer = await fs.readFile(/*turbopackIgnore: true*/ absolutePath);
     const ext = path.extname(absolutePath).toLowerCase();
     const mimeMap: Record<string, string> = {
       ".jpg": "image/jpeg",

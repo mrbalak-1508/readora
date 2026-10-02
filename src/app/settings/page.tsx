@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/navigation/Navbar";
 import { Footer } from "@/components/navigation/Footer";
 import { MobileNav } from "@/components/navigation/MobileNav";
@@ -26,10 +26,19 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"reading" | "profile" | "sound" | "security">("reading");
   const [savedToast, setSavedToast] = useState(false);
 
-  const [soundEnabled, setSoundEnabled] = useState(() => soundManager.isEnabled());
-  const [readerTheme, setReaderTheme] = useState(() => localStorage.getItem("readora_reader_theme") || "paper");
-  const [fontSize, setFontSize] = useState(() => Number(localStorage.getItem("readora_reader_font_size")) || 18);
-  const [fontFamily, setFontFamily] = useState(() => localStorage.getItem("readora_reader_font") || "serif");
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [readerTheme, setReaderTheme] = useState("paper");
+  const [fontSize, setFontSize] = useState(18);
+  const [fontFamily, setFontFamily] = useState("serif");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSoundEnabled(soundManager.isEnabled());
+      setReaderTheme(localStorage.getItem("readora_reader_theme") || "paper");
+      setFontSize(Number(localStorage.getItem("readora_reader_font_size")) || 18);
+      setFontFamily(localStorage.getItem("readora_reader_font") || "serif");
+    }
+  }, []);
 
   const handleSoundToggle = (val: boolean) => {
     setSoundEnabled(val);

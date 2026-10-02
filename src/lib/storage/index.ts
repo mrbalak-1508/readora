@@ -3,10 +3,18 @@ import fs from "fs/promises";
 import { existsSync, createReadStream } from "fs";
 import crypto from "crypto";
 
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
-const BOOKS_DIR = path.join(STORAGE_ROOT, "books");
-const COVERS_DIR = path.join(STORAGE_ROOT, "covers");
-const AVATARS_DIR = path.join(STORAGE_ROOT, "avatars");
+const STORAGE_ROOT = path.resolve(
+  /*turbopackIgnore: true*/ path.join(process.cwd(), "storage")
+);
+const BOOKS_DIR = path.resolve(
+  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "books")
+);
+const COVERS_DIR = path.resolve(
+  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "covers")
+);
+const AVATARS_DIR = path.resolve(
+  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "avatars")
+);
 
 // Ensure local storage directories exist
 export async function ensureStorageDirs() {
@@ -74,7 +82,7 @@ export class LocalStorageProvider implements StorageProvider {
     const absolutePath = path.join(targetDir, safeFileName);
 
     // Path traversal check
-    const resolved = path.resolve(absolutePath);
+    const resolved = path.resolve(/*turbopackIgnore: true*/ absolutePath);
     if (!resolved.startsWith(targetDir)) {
       throw new Error("Security violation: path traversal detected");
     }
@@ -93,13 +101,13 @@ export class LocalStorageProvider implements StorageProvider {
   async getFileStream(storagePath: string): Promise<NodeJS.ReadableStream | null> {
     const absPath = resolveSafeStoragePath(storagePath);
     if (!absPath) return null;
-    return createReadStream(absPath);
+    return createReadStream(/*turbopackIgnore: true*/ absPath);
   }
 
   async getFileBuffer(storagePath: string): Promise<Buffer | null> {
     const absPath = resolveSafeStoragePath(storagePath);
     if (!absPath) return null;
-    return fs.readFile(absPath);
+    return fs.readFile(/*turbopackIgnore: true*/ absPath);
   }
 
   async deleteFile(storagePath: string): Promise<boolean> {
@@ -194,13 +202,27 @@ export async function saveSecureFile(
 ): Promise<{ relativePath: string; absolutePath: string; safeFileName: string }> {
   await ensureStorageDirs();
   const res = await storageProvider.uploadFile(validated, subDir);
-  const absolutePath = path.resolve(process.cwd(), res.storagePath);
+  const absolutePath = path.resolve(
+    /*turbopackIgnore: true*/ path.join(process.cwd(), "storage", subDir, res.fileName)
+  );
   return { relativePath: res.storagePath, absolutePath, safeFileName: res.fileName };
 }
 
 export function resolveSafeStoragePath(relativePath: string): string | null {
-  const cleanRelative = relativePath.replace(/^[/\\]+/, "");
-  const absolutePath = path.resolve(process.cwd(), cleanRelative);
+  if (!relativePath) return null;
+  if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+    return null;
+  }
+
+  // Strip leading slashes and any leading 'storage/' prefix so it is strictly scoped to the storage folder
+  const cleanRelative = relativePath
+    .replace(/^[/\\]+/, "")
+    .replace(/^storage[/\\]+/, "");
+
+  // Statically scoped to 'storage' with turbopackIgnore
+  const absolutePath = path.resolve(
+    /*turbopackIgnore: true*/ path.join(process.cwd(), "storage", cleanRelative)
+  );
 
   // Path traversal prevention: MUST be inside STORAGE_ROOT
   if (!absolutePath.startsWith(STORAGE_ROOT)) {
