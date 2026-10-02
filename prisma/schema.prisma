@@ -1,0 +1,520 @@
+// READORA — Digital Library Database Architecture
+// Powered by Prisma ORM + SQLite (Zero Supabase, Migration-ready for PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  name                String
+  email               String           @unique
+  passwordHash        String
+  phone               String?
+  avatarPath          String?
+  role                String           @default("USER") // USER or ADMIN
+  onboardingCompleted Boolean          @default(false)
+  preferences         String?          // JSON: { theme, readerTheme, fontSize, lineHeight, soundEffects, animationSpeed }
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  lastActiveAt        DateTime         @default(now())
+
+  library             LibraryItem[]
+  progress            ReadingProgress[]
+  sessions            ReadingSession[]
+  bookmarks           Bookmark[]
+  highlights          Highlight[]
+  notes               Note[]
+  reviews             Review[]
+  notifications       Notification[]
+  cookieConsents      CookieConsent[]
+  adminActivities     AdminActivity[]
+  orders              Order[]
+  entitlements        BookEntitlement[]
+  subscriptions       Subscription[]
+  couponRedemptions   CouponRedemption[]
+
+  @@index([email])
+}
+
+model Category {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String?
+  imageUrl        String?
+  illustrationKey String?  // Key identifier for modern cartoon illustration
+  featured        Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  books           Book[]
+
+  @@index([slug])
+}
+
+model Author {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  books     Book[]
+}
+
+model Book {
+  id              String           @id @default(uuid())
+  slug            String           @unique
+  title           String
+  author          String
+  authorId        String?
+  description     String
+  coverPath       String           // Local filesystem storage path or cover URL
+  filePath        String?          // Secure relative path in /storage/books (Never in /public)
+  fileName        String?          // Original uploaded file name
+  mimeType        String?          // application/pdf, application/epub+zip, etc.
+  fileSize        Int?             // File size in bytes
+  format          String           @default("INTERACTIVE") // PDF, EPUB, INTERACTIVE
+  isbn            String?
+  language        String           @default("English")
+  categoryId      String?
+  categoryName    String
+  tags            String           @default("[]") // JSON stringified array of tags
+  publisher       String?
+  publicationDate String?
+  pages           Int              @default(1)
+  featured        Boolean          @default(false)
+  trending        Boolean          @default(false)
+  popular         Boolean          @default(false)
+  status          String           @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  rating          Float            @default(4.8)
+  ratingCount     Int              @default(1)
+  readCount       Int              @default(0)
+  sampleContent   String?
+
+  // Pricing & Access Control
+  accessType      String           @default("FREE") // FREE, PREVIEW, ONE_TIME_PURCHASE, SUBSCRIPTION, FREE_WITH_SUBSCRIPTION, PREMIUM
+  price           Float            @default(0)      // Price in INR
+  originalPrice   Float?                            // Original MSRP for strikethrough
+  discount        Int              @default(0)      // Percentage discount
+  currency        String           @default("INR")
+
+  // Free Preview Rules
+  previewType     String           @default("PAGES") // PAGES, PERCENTAGE, CHAPTERS
+  previewPages    Int              @default(10)
+  previewPercentage Int            @default(15)
+  previewChapters Int              @default(2)
+  watermarkEnabled Boolean         @default(true)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  authorRef       Author?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  chapters        Chapter[]
+  libraryItems    LibraryItem[]
+  progress        ReadingProgress[]
+  sessions        ReadingSession[]
+  bookmarks       Bookmark[]
+  highlights      Highlight[]
+  notes           Note[]
+  reviews         Review[]
+  orderItems      OrderItem[]
+  entitlements    BookEntitlement[]
+
+  @@index([slug])
+  @@index([title])
+  @@index([author])
+  @@index([status])
+  @@index([categoryId])
+  @@index([accessType])
+}
+
+model Chapter {
+  id        String   @id @default(uuid())
+  bookId    String
+  title     String
+  page      Int      @default(1)
+  content   String?
+  order     Int      @default(0)
+
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model LibraryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  status    String   @default("saved") // reading, saved, completed, purchased
+  addedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
+
+model ReadingProgress {
+  id               String    @id @default(uuid())
+  userId           String
+  bookId           String
+  bookTitle        String?
+  bookCover        String?
+  author           String?
+  currentPage      Int       @default(1)
+  totalPages       Int       @default(1)
+  currentChapter   String?
+  percentage       Int       @default(0)
+  lastOpened       DateTime  @default(now())
+  timeSpentSeconds Int       @default(0)
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book             Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
+
+model ReadingSession {
+  id              String   @id @default(uuid())
+  userId          String
+  bookId          String
+  durationSeconds Int
+  pagesRead       Int      @default(1)
+  sessionDate     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Bookmark {
+  id           String   @id @default(uuid())
+  userId       String
+  bookId       String
+  page         Int
+  chapterTitle String?
+  snippet      String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, bookId])
+}
+
+model Highlight {
+  id           String   @id @default(uuid())
+  userId       String
+  bookId       String
+  page         Int
+  chapterTitle String?
+  selectedText String
+  color        String   @default("coral") // coral, yellow, plum, soft-blue, soft-green
+  note         String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, bookId])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  page      Int
+  noteText  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  userId     String
+  bookId     String
+  rating     Int      @default(5)
+  reviewText String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+// COMMERCIAL E-COMMERCE, ORDERS, PAYMENTS & LICENSING
+// -------------------------------------------------------------
+
+model Order {
+  id             String            @id @default(uuid())
+  orderNumber    String            @unique
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         String            @default("PENDING") // PENDING, PAID, FAILED, CANCELLED, REFUNDED, EXPIRED
+  subtotal       Float
+  discountAmount Float             @default(0)
+  taxAmount      Float             @default(0)
+  totalAmount    Float
+  currency       String            @default("INR")
+  paymentMethod  String?           // upi, card, netbanking, wallet, mock
+  paymentProvider String?          // razorpay, stripe, paypal
+  couponId       String?
+  coupon         Coupon?           @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  metadata       String?           // JSON string
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  items          OrderItem[]
+  payments       Payment[]
+  entitlements   BookEntitlement[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId    String?
+  book      Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  title     String
+  price     Float
+  quantity  Int      @default(1)
+  metadata  String?  // JSON string
+
+  @@index([orderId])
+  @@index([bookId])
+}
+
+model Payment {
+  id                 String   @id @default(uuid())
+  orderId            String
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider           String   // razorpay, stripe, paypal, simulated
+  providerPaymentId  String?  // Gateway payment ID (e.g. pay_xxxxx or pi_xxxxx)
+  providerOrderId    String?  // Gateway order ID (e.g. order_xxxxx)
+  providerSignature  String?  // HMAC signature for server verification
+  amount             Float
+  currency           String   @default("INR")
+  status             String   @default("PENDING") // PENDING, SUCCESS, FAILED, REFUNDED
+  errorMessage       String?
+  rawResponse        String?  // Full JSON response for audit log
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([providerPaymentId])
+  @@index([status])
+}
+
+model BookEntitlement {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId      String
+  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  source      String    @default("PURCHASE") // PURCHASE, SUBSCRIPTION, ADMIN_GRANT, PROMO
+  validUntil  DateTime? // null = Lifetime purchase
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+// -------------------------------------------------------------
+// SUBSCRIPTIONS & PLANS
+// -------------------------------------------------------------
+
+model SubscriptionPlan {
+  id           String         @id @default(uuid())
+  name         String         // Readora Monthly, Readora Annual
+  slug         String         @unique
+  description  String?
+  price        Float
+  currency     String         @default("INR")
+  interval     String         @default("MONTHLY") // MONTHLY, YEARLY
+  intervalCount Int           @default(1)
+  trialDays    Int            @default(0)
+  active       Boolean        @default(true)
+  featured     Boolean        @default(false)
+  displayOrder Int            @default(0)
+  benefits     String         @default("[]") // JSON string of benefits array
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([slug])
+  @@index([active])
+}
+
+model Subscription {
+  id                     String           @id @default(uuid())
+  userId                 String
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                 String
+  plan                   SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status                 String           @default("ACTIVE") // ACTIVE, CANCELLED, EXPIRED, PAST_DUE, TRIALING
+  currentPeriodStart     DateTime         @default(now())
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean          @default(false)
+  provider               String?          // razorpay, stripe, paypal
+  providerSubscriptionId String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// -------------------------------------------------------------
+// COUPONS & DISCOUNTS
+// -------------------------------------------------------------
+
+model Coupon {
+  id                String             @id @default(uuid())
+  code              String             @unique
+  discountType      String             @default("PERCENTAGE") // PERCENTAGE or FIXED
+  discountValue     Float
+  minOrderAmount    Float              @default(0)
+  maxDiscountAmount Float?
+  usageLimit        Int?
+  usageCount        Int                @default(0)
+  perUserLimit      Int                @default(1)
+  startDate         DateTime           @default(now())
+  endDate           DateTime?
+  active            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+
+  orders            Order[]
+  redemptions       CouponRedemption[]
+
+  @@index([code])
+  @@index([active])
+}
+
+model CouponRedemption {
+  id         String   @id @default(uuid())
+  couponId   String
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId    String?
+  redeemedAt DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+// ADMIN CMS, SETTINGS & COOKIE CONSENT
+// -------------------------------------------------------------
+
+model PaymentProviderConfig {
+  id                 String   @id @default(uuid())
+  provider           String   @unique // razorpay, stripe, paypal
+  enabled            Boolean  @default(false)
+  testMode           Boolean  @default(true)
+  publicKey          String?
+  secretKeyEncrypted String?  // Server-only encrypted
+  webhookSecret      String?
+  updatedAt          DateTime @updatedAt
+}
+
+model HomepageSection {
+  id         String   @id @default(uuid())
+  sectionKey String   @unique // hero, continue_reading, featured, trending, new_releases, mood, categories, popular, recommended
+  title      String
+  subtitle   String?
+  enabled    Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  config     String?  // JSON string
+  updatedAt  DateTime @updatedAt
+
+  @@index([sectionKey])
+  @@index([enabled])
+}
+
+model SiteSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   // JSON string
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model CookieConsent {
+  id             String   @id @default(uuid())
+  userId         String?
+  anonymousId    String?
+  necessary      Boolean  @default(true) // Always ON
+  analytics      Boolean  @default(false)
+  functional     Boolean  @default(false)
+  marketing      Boolean  @default(false)
+  consentVersion String   @default("1.0")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AdminActivity {
+  id         String   @id @default(uuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  details    String?  // JSON details
+  createdAt  DateTime @default(now())
+
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+}
