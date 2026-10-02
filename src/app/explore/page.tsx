@@ -202,7 +202,7 @@ function ExploreContent() {
 
       {/* Books Grid */}
       {filteredBooks.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
           {filteredBooks.map((book) => (
             <BookCard key={book.id} book={book} />
           ))}
@@ -220,7 +220,7 @@ function ExploreContent() {
           </p>
           <button
             onClick={clearAllFilters}
-            className="mt-5 px-5 py-2.5 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
+            className="mt-5 px-5 py-2.5 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs cursor-pointer"
           >
             Clear All Filters
           </button>
@@ -234,7 +234,7 @@ export default function ExplorePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-main)]">
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         <Suspense fallback={<div className="p-12 text-center text-sm text-[var(--text-muted)]">Loading books...</div>}>
           <ExploreContent />
         </Suspense>

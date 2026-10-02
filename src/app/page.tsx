@@ -84,7 +84,7 @@ export default async function HomePage() {
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
 
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         {/* 1. Cinematic Digital Library Hero */}
         <BookHero books={books} />
 

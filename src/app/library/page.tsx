@@ -119,7 +119,7 @@ export default function LibraryPage() {
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
 
-      <main className="flex-1 py-10 sm:py-14">
+      <main className="flex-1 py-8 sm:py-14 pb-20 md:pb-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
@@ -135,17 +135,17 @@ export default function LibraryPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
               <Link
                 href="/account/orders"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] text-xs font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors shadow-2xs"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] text-xs font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors shadow-2xs"
               >
                 <ShieldCheck className="w-4 h-4 text-[var(--primary)]" />
                 <span>Order History</span>
               </Link>
               <Link
                 href="/settings/subscription"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Subscription</span>
@@ -154,22 +154,22 @@ export default function LibraryPage() {
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <div className="p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
               <span className="text-xs font-semibold text-[var(--muted)]">Total In Library</span>
-              <div className="text-2xl font-bold text-[var(--foreground)] mt-1">{stats.total}</div>
+              <div className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mt-1">{stats.total}</div>
             </div>
-            <div className="p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
               <span className="text-xs font-semibold text-[var(--muted)]">Continue Reading</span>
-              <div className="text-2xl font-bold text-[var(--primary)] mt-1">{stats.reading}</div>
+              <div className="text-xl sm:text-2xl font-bold text-[var(--primary)] mt-1">{stats.reading}</div>
             </div>
-            <div className="p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
               <span className="text-xs font-semibold text-[var(--muted)]">Purchased Volumes</span>
-              <div className="text-2xl font-bold text-[#3D785D] mt-1">{stats.purchased}</div>
+              <div className="text-xl sm:text-2xl font-bold text-[#3D785D] mt-1">{stats.purchased}</div>
             </div>
-            <div className="p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
               <span className="text-xs font-semibold text-[var(--muted)]">Completed</span>
-              <div className="text-2xl font-bold text-[var(--secondary)] mt-1">{stats.completed}</div>
+              <div className="text-xl sm:text-2xl font-bold text-[var(--secondary)] mt-1">{stats.completed}</div>
             </div>
           </div>
 
@@ -180,7 +180,7 @@ export default function LibraryPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === tab.id
                       ? "bg-[var(--primary)] text-white shadow-xs"
                       : "bg-[var(--card)] text-[var(--muted)] border border-[var(--border)] hover:bg-[var(--bg-subtle)] hover:text-[var(--foreground)]"
@@ -201,7 +201,7 @@ export default function LibraryPage() {
             </div>
 
             {/* Search within library */}
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-[200px] sm:min-w-[220px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
                 type="text"
@@ -240,7 +240,7 @@ export default function LibraryPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
               {filteredItems.map((item) => (
                 <div key={item.id} className="relative group">
                   <BookCard book={item.book} progress={item.progress?.percentage} />

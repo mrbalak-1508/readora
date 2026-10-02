@@ -73,7 +73,7 @@ export default function SettingsPage() {
     <div className="min-h-screen flex flex-col bg-[var(--bg-main)]">
       <Navbar />
 
-      <main className="flex-1 py-10 sm:py-14">
+      <main className="flex-1 py-8 sm:py-14 pb-20 md:pb-14">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="font-editorial text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-main)]">

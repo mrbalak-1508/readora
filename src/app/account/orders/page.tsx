@@ -77,7 +77,7 @@ export default function UserOrdersPage() {
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]">
       <Navbar />
 
-      <main className="flex-1 py-10 sm:py-16">
+      <main className="flex-1 py-8 sm:py-16 pb-20 md:pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

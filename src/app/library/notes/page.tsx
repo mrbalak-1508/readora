@@ -40,7 +40,7 @@ export default function NotesPage() {
             <span>Back to My Library</span>
           </Link>
 
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
             <div>
               <h1 className="font-editorial text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-main)]">
                 Highlights & Notes
@@ -49,7 +49,7 @@ export default function NotesPage() {
                 Passages, reflections, and marginalia captured during your reading sessions.
               </p>
             </div>
-            <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-main)] px-3 py-1.5 rounded-full font-medium">
+            <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-main)] px-3 py-1.5 rounded-full font-medium shrink-0 self-start sm:self-auto">
               {highlights.length} passages saved
             </div>
           </div>
@@ -61,12 +61,12 @@ export default function NotesPage() {
                 return (
                   <div
                     key={item.id}
-                    className="p-6 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm hover:border-[var(--accent)]/30 transition-all space-y-4"
+                    className="p-4 sm:p-6 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-sm hover:border-[var(--accent)]/30 transition-all space-y-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Quote className="w-4 h-4 text-[var(--accent)]" />
-                        <span className="text-xs font-semibold text-[var(--text-main)]">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <Quote className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                        <span className="text-xs font-semibold text-[var(--text-main)] truncate max-w-[200px] sm:max-w-none">
                           {book?.title || "Book Passage"}
                         </span>
                         <span className="text-xs text-[var(--text-subtle)]">•</span>
@@ -75,13 +75,13 @@ export default function NotesPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0 ml-auto">
                         <span className="text-[11px] text-[var(--text-subtle)]">
                           {formatDate(item.createdAt)}
                         </span>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1 text-[var(--text-subtle)] hover:text-red-500 transition-colors"
+                          className="p-1 text-[var(--text-subtle)] hover:text-red-500 transition-colors cursor-pointer"
                           title="Delete Highlight"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

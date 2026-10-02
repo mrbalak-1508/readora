@@ -17,15 +17,15 @@ export default function CategoriesPage() {
     <div className="min-h-screen flex flex-col bg-[var(--background)]">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
-        <div className="max-w-2xl mb-12">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-20 md:pb-12 w-full">
+        <div className="max-w-2xl mb-8 sm:mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-light)] text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-3">
             Library Catalog
           </div>
-          <h1 className="font-editorial text-4xl sm:text-5xl font-bold text-[var(--foreground)] tracking-tight">
+          <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--foreground)] tracking-tight">
             Explore by Category
           </h1>
-          <p className="text-base text-[var(--muted)] mt-2">
+          <p className="text-sm sm:text-base text-[var(--muted)] mt-2">
             Every genre in Readora is carefully cataloged with curated masterworks and contemporary titles.
           </p>
         </div>

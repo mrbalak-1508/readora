@@ -415,7 +415,7 @@ export default function AdminDashboardPage() {
             {stats?.mostReadBooks?.map((book, idx) => (
               <div
                 key={book.id}
-                className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--background)] px-3 rounded-2xl transition-colors"
+                className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 hover:bg-[var(--background)] px-3 rounded-2xl transition-colors"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <span className="font-mono text-xs font-bold text-[var(--muted)] w-4">
@@ -440,7 +440,7 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-7 sm:pl-0 w-full sm:w-auto border-t sm:border-t-0 border-[var(--border)] pt-2 sm:pt-0">
                   <span className="text-xs font-bold text-[var(--foreground)] font-mono">
                     {book.readCount} reads
                   </span>

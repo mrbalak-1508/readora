@@ -75,7 +75,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${newsreader.variable} scroll-smooth`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased selection:bg-[#8A2846]/15 selection:text-[#8A2846]"
+        className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased selection:bg-[#8A2846]/15 selection:text-[#8A2846] overflow-x-hidden"
         suppressHydrationWarning
       >
         <Providers>{children}</Providers>

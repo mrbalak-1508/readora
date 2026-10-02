@@ -281,13 +281,13 @@ export default function BookDetailPage() {
               </div>
 
               {/* Dynamic Action Buttons based on Access Status */}
-              <div className="p-5 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)] space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
                   {hasFullAccess || isFree ? (
                     <Link
                       href={`/read/${book.id}`}
                       onClick={() => soundManager.playBookOpen()}
-                      className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-[var(--primary)] text-white text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
+                      className="inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3.5 rounded-2xl bg-[var(--primary)] text-white text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs text-center"
                     >
                       <BookOpen className="w-4 h-4" />
                       <span>{hasFullAccess ? "Continue Reading" : "Read Free Now"}</span>
@@ -297,7 +297,7 @@ export default function BookDetailPage() {
                       {/* One Time Purchase CTA */}
                       <button
                         onClick={() => setIsCheckoutOpen(true)}
-                        className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-[var(--primary)] text-white text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
+                        className="inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3.5 rounded-2xl bg-[var(--primary)] text-white text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs text-center cursor-pointer"
                       >
                         <Lock className="w-4 h-4" />
                         <span>Buy & Read — ₹{book.price || 199}</span>
@@ -308,7 +308,7 @@ export default function BookDetailPage() {
                         <Link
                           href={`/read/${book.id}`}
                           onClick={() => soundManager.playBookOpen()}
-                          className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-all shadow-2xs"
+                          className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-all shadow-2xs text-center"
                         >
                           <Eye className="w-4 h-4 text-[var(--secondary)]" />
                           <span>Read Free Preview</span>
@@ -320,7 +320,7 @@ export default function BookDetailPage() {
                   {/* Add to Library Toggle */}
                   <button
                     onClick={toggleLibrary}
-                    className={`inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-bold border transition-colors ${
+                    className={`inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-bold border transition-colors cursor-pointer ${
                       inLibrary
                         ? "bg-[var(--card)] border-[var(--secondary)] text-[var(--secondary)]"
                         : "bg-[var(--card)] border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--bg-subtle)]"
@@ -448,7 +448,7 @@ export default function BookDetailPage() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
                 {relatedBooks.map((b) => (
                   <BookCard key={b.id} book={b} />
                 ))}

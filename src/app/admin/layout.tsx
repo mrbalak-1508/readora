@@ -46,83 +46,94 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
   ];
 
   return (
-    <aside
-      className={`w-full lg:w-64 shrink-0 border-r border-[var(--border)] bg-[var(--card)] p-5 flex flex-col justify-between transition-all overflow-y-auto max-h-screen ${
-        mobileOpen ? "block" : "hidden lg:flex"
-      }`}
-    >
-      <div className="space-y-5">
-        {/* Brand & Admin Badge */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-editorial text-2xl font-bold tracking-tight text-[var(--foreground)]">
-                READORA
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--primary)] border border-[var(--primary)]/20">
-                Admin
-              </span>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity animate-in fade-in duration-200"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] lg:static lg:w-64 shrink-0 border-r border-[var(--border)] bg-[var(--card)] p-5 flex flex-col justify-between transition-all overflow-y-auto ${
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+        } duration-250 ease-in-out`}
+      >
+        <div className="space-y-5">
+          {/* Brand & Admin Badge */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-editorial text-2xl font-bold tracking-tight text-[var(--foreground)]">
+                  READORA
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--primary)] border border-[var(--primary)]/20">
+                  Admin
+                </span>
+              </div>
+              <p className="text-xs text-[var(--muted)] mt-0.5 font-medium">
+                Operations & Platform Studio
+              </p>
             </div>
-            <p className="text-xs text-[var(--muted)] mt-0.5 font-medium">
-              Operations & Platform Studio
-            </p>
+
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="lg:hidden p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors cursor-pointer"
+                aria-label="Close admin menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="lg:hidden p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)]"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          {/* Navigation Links */}
+          <nav className="space-y-1">
+            {links.map((link) => {
+              const Icon = link.icon;
+              const isActive =
+                link.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname === link.href ||
+                    (pathname.startsWith(link.href + "/") &&
+                      !links.some(
+                        (other) =>
+                          other.href !== link.href &&
+                          other.href.startsWith(link.href) &&
+                          (pathname === other.href || pathname.startsWith(other.href + "/"))
+                      ));
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-[var(--primary)] text-white shadow-xs"
+                      : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="space-y-1">
-          {links.map((link) => {
-            const Icon = link.icon;
-            const isActive =
-              link.href === "/admin"
-                ? pathname === "/admin"
-                : pathname === link.href ||
-                  (pathname.startsWith(link.href + "/") &&
-                    !links.some(
-                      (other) =>
-                        other.href !== link.href &&
-                        other.href.startsWith(link.href) &&
-                        (pathname === other.href || pathname.startsWith(other.href + "/"))
-                    ));
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-[var(--primary)] text-white shadow-xs"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className="pt-4 border-t border-[var(--border)] space-y-2 mt-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Exit to Digital Library</span>
-        </Link>
-      </div>
-    </aside>
+        <div className="pt-4 border-t border-[var(--border)] space-y-2 mt-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Exit to Digital Library</span>
+          </Link>
+        </div>
+      </aside>
+    </>
   );
 }
 
