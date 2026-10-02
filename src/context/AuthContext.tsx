@@ -55,8 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: dbUser.name,
             phone: dbUser.phone || undefined,
             role: dbUser.role?.toLowerCase() === "admin" ? "admin" : "user",
-            avatar_url: dbUser.avatarPath || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-            joined_at: new Date().toISOString(),
+            avatar_url: dbUser.avatarPath || undefined,
+            joined_at: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
             onboardingCompleted: dbUser.onboardingCompleted ?? false,
             preferences: {
               ...DEFAULT_PREFERENCES,
@@ -105,8 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: dbUser.name,
           phone: dbUser.phone || undefined,
           role: dbUser.role?.toLowerCase() === "admin" ? "admin" : "user",
-          avatar_url: dbUser.avatarPath || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-          joined_at: new Date().toISOString(),
+          avatar_url: dbUser.avatarPath || undefined,
+          joined_at: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
           onboardingCompleted: dbUser.onboardingCompleted ?? false,
           preferences: {
             ...DEFAULT_PREFERENCES,
@@ -154,8 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: dbUser.name,
           phone: dbUser.phone || undefined,
           role: dbUser.role?.toLowerCase() === "admin" ? "admin" : "user",
-          avatar_url: dbUser.avatarPath || avatarPath || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-          joined_at: new Date().toISOString(),
+          avatar_url: dbUser.avatarPath || avatarPath || undefined,
+          joined_at: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
           onboardingCompleted: dbUser.onboardingCompleted ?? false,
           preferences: {
             ...DEFAULT_PREFERENCES,

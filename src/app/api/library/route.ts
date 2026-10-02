@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "usr-admin-readora";
+    // Guests/unauthenticated visitors have an empty library
+    if (!user) {
+      return NextResponse.json([]);
+    }
+    const userId = user.id;
 
-    // Fetch library items, entitlements, and reading progress
+    // Fetch library items, entitlements, and reading progress for authenticated user
     const [items, entitlements, progressList, subscription] = await Promise.all([
       prisma.libraryItem.findMany({
         where: { userId },
@@ -103,10 +107,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Please sign in to add books to your library." }, { status: 401 });
+    }
     const body = await request.json();
-    const userId = user?.id || body.userId || "usr-admin-readora";
+    const userId = user.id;
     const bookId = body.bookId;
     const status = body.status || "saved";
+
+    if (!bookId) {
+      return NextResponse.json({ error: "Missing bookId" }, { status: 400 });
+    }
 
     const item = await prisma.libraryItem.upsert({
       where: {
@@ -130,15 +141,19 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Please sign in to update your library." }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
-    const userId = user?.id || searchParams.get("userId") || "usr-admin-readora";
+    const userId = user.id;
     const bookId = searchParams.get("bookId");
 
     if (!bookId) return NextResponse.json({ error: "Missing bookId" }, { status: 400 });
 
-    await prisma.libraryItem.delete({
+    await prisma.libraryItem.deleteMany({
       where: {
-        userId_bookId: { userId, bookId },
+        userId,
+        bookId,
       },
     });
 

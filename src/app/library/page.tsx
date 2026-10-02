@@ -6,23 +6,24 @@ import { Navbar } from "@/components/navigation/Navbar";
 import { Footer } from "@/components/navigation/Footer";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { BookCard } from "@/components/books/BookCard";
+import { useAuth } from "@/context/AuthContext";
 import { store } from "@/lib/data/storage";
-import { LibraryItem, ReadingProgress } from "@/lib/types";
 import { EmptyShelfIllustration } from "@/components/illustrations";
 import {
   Bookmark,
   BookOpen,
   CheckCircle,
-  Clock,
   Search,
   Sparkles,
   ShieldCheck,
-  Zap,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 
 type LibraryCategoryTab = "all" | "reading" | "purchased" | "subscription" | "free" | "completed";
 
 export default function LibraryPage() {
+  const { user, isLoading: authLoading } = useAuth();
   const [library, setLibrary] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<LibraryCategoryTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,11 +31,19 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
 
   const loadLibrary = async () => {
+    // If not authenticated, guest has empty library
+    if (!user) {
+      setLibrary([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/library");
       if (res.ok) {
         const data = await res.json();
-        setLibrary(data);
+        setLibrary(Array.isArray(data) ? data : []);
       } else {
         setLibrary(store.getLibrary());
       }
@@ -46,8 +55,10 @@ export default function LibraryPage() {
   };
 
   useEffect(() => {
-    loadLibrary();
-  }, []);
+    if (!authLoading) {
+      loadLibrary();
+    }
+  }, [user, authLoading]);
 
   const filteredItems = useMemo(() => {
     return library
@@ -55,7 +66,7 @@ export default function LibraryPage() {
         const book = item.book;
         const progress = item.progress;
 
-        // Categories from Requirement 25:
+        // Categories:
         // Continue Reading, Purchased, Subscription, Free, Completed
         if (activeTab === "reading") {
           return progress && !progress.completed && progress.currentPage > 1;
@@ -66,11 +77,11 @@ export default function LibraryPage() {
         if (activeTab === "subscription") {
           return (
             item.hasSubscription &&
-            ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(book.accessType)
+            ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(book?.accessType)
           );
         }
         if (activeTab === "free") {
-          return book.accessType === "FREE" || book.price === 0;
+          return book?.accessType === "FREE" || book?.price === 0;
         }
         if (activeTab === "completed") {
           return progress?.completed || item.status === "completed";
@@ -79,15 +90,15 @@ export default function LibraryPage() {
         // Search filter
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
-          const matchTitle = book.title?.toLowerCase().includes(q);
-          const matchAuthor = book.author?.toLowerCase().includes(q);
+          const matchTitle = book?.title?.toLowerCase().includes(q);
+          const matchAuthor = book?.author?.toLowerCase().includes(q);
           if (!matchTitle && !matchAuthor) return false;
         }
 
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === "title") return a.book.title.localeCompare(b.book.title);
+        if (sortBy === "title") return (a.book?.title || "").localeCompare(b.book?.title || "");
         if (sortBy === "progress") {
           const progA = a.progress?.percentage || 0;
           const progB = b.progress?.percentage || 0;
@@ -121,6 +132,41 @@ export default function LibraryPage() {
 
       <main className="flex-1 py-8 sm:py-14 pb-20 md:pb-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Guest notification banner */}
+          {!authLoading && !user && (
+            <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent-light)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-[var(--foreground)]">
+                    You are exploring the Library as a Guest
+                  </h2>
+                  <p className="text-xs text-[var(--muted)]">
+                    Sign in to sync your personal reading progress, access your purchased eBooks, and save books across all your devices.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                <Link
+                  href="/login"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Register</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
             <div>
@@ -173,7 +219,7 @@ export default function LibraryPage() {
             </div>
           </div>
 
-          {/* Category Tabs: Continue Reading, Purchased, Subscription, Free, Completed */}
+          {/* Category Tabs */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] mb-8">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
               {tabs.map((tab) => (
@@ -214,7 +260,7 @@ export default function LibraryPage() {
           </div>
 
           {/* Book List / Grid */}
-          {loading ? (
+          {loading || authLoading ? (
             <div className="py-20 text-center">
               <div className="w-8 h-8 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin mx-auto" />
             </div>
@@ -222,22 +268,39 @@ export default function LibraryPage() {
             <div className="py-16 text-center max-w-md mx-auto">
               <EmptyShelfIllustration size={220} className="mx-auto drop-shadow-xs" />
               <h3 className="font-editorial text-2xl font-bold text-[var(--foreground)] mt-4">
-                No Books Found in this Shelf
+                {!user ? "Your Personal Shelf is Waiting" : "No Books Found on this Shelf"}
               </h3>
               <p className="text-xs text-[var(--muted)] mt-1.5">
-                {activeTab === "purchased"
+                {!user
+                  ? "Sign in to access your saved titles, continue your reading journeys, and view purchases."
+                  : activeTab === "purchased"
                   ? "You haven't purchased any individual books yet. Explore our catalog or subscribe to Readora Premium."
                   : activeTab === "reading"
                   ? "You don't have any books currently in progress."
                   : "Explore the Readora digital library and build your personal collection."}
               </p>
-              <Link
-                href="/explore"
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Explore Books</span>
-              </Link>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                {!user && (
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </Link>
+                )}
+                <Link
+                  href="/explore"
+                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold transition-all shadow-xs ${
+                    !user
+                      ? "border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--bg-subtle)]"
+                      : "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]"
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Explore Books</span>
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
@@ -261,7 +324,7 @@ export default function LibraryPage() {
                     )}
 
                     <Link
-                      href={`/read/${item.book.id}`}
+                      href={`/read/${item.book?.id || item.bookId}`}
                       className="font-bold text-[var(--primary)] hover:underline"
                     >
                       Read →

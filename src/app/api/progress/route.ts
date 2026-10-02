@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 
-// Helper to resolve a valid userId from session, payload, or database
-async function resolveValidUser(payloadUserId?: string): Promise<string> {
+// Helper to resolve an authenticated userId from session or valid payload
+async function resolveValidUser(payloadUserId?: string): Promise<string | null> {
   // 1. Check active session cookie
   const sessionUser = await getCurrentUser();
   if (sessionUser?.id) {
@@ -11,7 +11,7 @@ async function resolveValidUser(payloadUserId?: string): Promise<string> {
   }
 
   // 2. Check if payloadUserId exists in database
-  if (payloadUserId && payloadUserId !== "user-default") {
+  if (payloadUserId && payloadUserId !== "user-default" && payloadUserId !== "usr-admin-readora") {
     const exists = await prisma.user.findUnique({
       where: { id: payloadUserId },
       select: { id: true },
@@ -19,23 +19,7 @@ async function resolveValidUser(payloadUserId?: string): Promise<string> {
     if (exists) return exists.id;
   }
 
-  // 3. Fallback to default admin or reader account
-  const fallback = await prisma.user.findFirst({
-    select: { id: true },
-  });
-  if (fallback) return fallback.id;
-
-  // 4. If no users exist, create guest reader
-  const guest = await prisma.user.create({
-    data: {
-      id: "usr-guest-readora",
-      email: "guest@readora.library",
-      name: "Guest Reader",
-      passwordHash: "$2a$10$w09uY4hK5YjW7P9HkUaW1.K2c2E3OQ0gU3C5A6y1K8V0s7m4c2P1y",
-      role: "USER",
-    },
-  });
-  return guest.id;
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -43,6 +27,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = await resolveValidUser(searchParams.get("userId") || undefined);
     const bookParam = searchParams.get("bookId");
+
+    // Unauthenticated visitors have no private reading progress
+    if (!userId) {
+      return NextResponse.json(bookParam ? null : []);
+    }
 
     if (bookParam) {
       const book = await prisma.book.findFirst({
@@ -102,8 +91,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    // 2. Resolve guaranteed valid userId (foreign key safe)
+    // 2. Resolve authenticated user
     const userId = await resolveValidUser(body.userId);
+    if (!userId) {
+      return NextResponse.json({ error: "Please sign in to save your reading progress." }, { status: 401 });
+    }
 
     const currentPage = Number(body.currentPage) || 1;
     const totalPages = Number(body.totalPages) || book.pages || 1;

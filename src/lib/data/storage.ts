@@ -140,43 +140,18 @@ class DataStore {
     if (typeof window === "undefined") return [];
     const stored = localStorage.getItem(LIBRARY_KEY);
     if (!stored) {
-      const books = this.getBooks();
-      const initial: LibraryItem[] = [
-        {
-          id: "lib-1",
-          userId: "usr-admin-readora",
-          bookId: "book-1",
-          book: books[0],
-          status: "reading",
-          addedAt: new Date().toISOString(),
-          progress: {
-            id: "prog-1",
-            userId: "usr-admin-readora",
-            bookId: "book-1",
-            bookTitle: books[0].title,
-            currentPage: 48,
-            totalPages: books[0].pages,
-            currentChapter: "The 1st Law: Make It Obvious",
-            percentage: 68,
-            lastOpened: new Date().toISOString(),
-            timeSpentSeconds: 4320,
-            completed: false,
-          },
-        },
-        {
-          id: "lib-2",
-          userId: "usr-admin-readora",
-          bookId: "book-2",
-          book: books[1],
-          status: "saved",
-          addedAt: new Date().toISOString(),
-        },
-      ];
-      localStorage.setItem(LIBRARY_KEY, JSON.stringify(initial));
-      return initial;
+      return [];
     }
     try {
-      return JSON.parse(stored);
+      const items: LibraryItem[] = JSON.parse(stored);
+      // Clean out any legacy mock seed items from previous versions
+      const cleaned = items.filter(
+        (item) => item.id !== "lib-1" && item.id !== "lib-2" && item.userId !== "usr-admin-readora"
+      );
+      if (cleaned.length !== items.length) {
+        localStorage.setItem(LIBRARY_KEY, JSON.stringify(cleaned));
+      }
+      return cleaned;
     } catch {
       return [];
     }
@@ -185,12 +160,13 @@ class DataStore {
   public async addToLibrary(book: Book, status: "reading" | "saved" | "completed" = "saved"): Promise<void> {
     const library = this.getLibrary();
     const existing = library.find((item) => item.bookId === book.id);
+    const activeUserId = typeof window !== "undefined" ? localStorage.getItem("readora_userId") || "local-user" : "local-user";
     if (existing) {
       existing.status = status;
     } else {
       library.unshift({
         id: `lib-${Date.now()}`,
-        userId: "usr-admin-readora",
+        userId: activeUserId,
         bookId: book.id,
         book,
         status,
@@ -236,7 +212,11 @@ class DataStore {
     if (!stored) return undefined;
     try {
       const all: Record<string, ReadingProgress> = JSON.parse(stored);
-      return all[bookId];
+      const prog = all[bookId];
+      if (prog && (prog.id === "prog-1" || prog.userId === "usr-admin-readora")) {
+        return undefined;
+      }
+      return prog;
     } catch {
       return undefined;
     }
@@ -248,7 +228,19 @@ class DataStore {
     if (!stored) return [];
     try {
       const all: Record<string, ReadingProgress> = JSON.parse(stored);
-      return Object.values(all);
+      const cleanedAll: Record<string, ReadingProgress> = {};
+      let changed = false;
+      for (const [key, val] of Object.entries(all)) {
+        if (val.id === "prog-1" || val.userId === "usr-admin-readora") {
+          changed = true;
+          continue;
+        }
+        cleanedAll[key] = val;
+      }
+      if (changed) {
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(cleanedAll));
+      }
+      return Object.values(cleanedAll);
     } catch {
       return [];
     }

@@ -71,6 +71,7 @@ export async function POST(request: Request) {
         role: user.role,
         avatarPath: user.avatarPath,
         onboardingCompleted: user.onboardingCompleted,
+        createdAt: user.createdAt,
       },
     });
   } catch (error: any) {

@@ -31,14 +31,16 @@ export async function GET() {
     // 2. Seed Default Curator / Admin
     const adminUser = await prisma.user.upsert({
       where: { email: "curator@readora.library" },
-      update: {},
+      update: {
+        avatarPath: null,
+      },
       create: {
         id: "usr-admin-readora",
         email: "curator@readora.library",
         name: "Marcus Vance",
         passwordHash: "$2a$10$w09uY4hK5YjW7P9HkUaW1.K2c2E3OQ0gU3C5A6y1K8V0s7m4c2P1y",
         role: "ADMIN",
-        avatarPath: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+        avatarPath: null,
       },
     });
 

@@ -14,6 +14,7 @@ export interface SessionUser {
   avatarPath?: string | null;
   onboardingCompleted: boolean;
   preferences?: any;
+  createdAt?: Date | string | null;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -86,6 +87,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         avatarPath: true,
         onboardingCompleted: true,
         preferences: true,
+        createdAt: true,
       },
     });
 
@@ -109,6 +111,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       avatarPath: user.avatarPath,
       onboardingCompleted: user.onboardingCompleted,
       preferences: parsedPreferences,
+      createdAt: user.createdAt,
     };
   } catch {
     return null;

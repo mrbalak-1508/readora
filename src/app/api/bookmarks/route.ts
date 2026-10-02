@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 
-async function resolveValidUser(payloadUserId?: string): Promise<string> {
+async function resolveValidUser(payloadUserId?: string): Promise<string | null> {
   const sessionUser = await getCurrentUser();
   if (sessionUser?.id) return sessionUser.id;
 
-  if (payloadUserId && payloadUserId !== "user-default") {
+  if (payloadUserId && payloadUserId !== "user-default" && payloadUserId !== "usr-admin-readora") {
     const exists = await prisma.user.findUnique({
       where: { id: payloadUserId },
       select: { id: true },
@@ -14,19 +14,7 @@ async function resolveValidUser(payloadUserId?: string): Promise<string> {
     if (exists) return exists.id;
   }
 
-  const fallback = await prisma.user.findFirst({ select: { id: true } });
-  if (fallback) return fallback.id;
-
-  const guest = await prisma.user.create({
-    data: {
-      id: "usr-guest-readora",
-      email: "guest@readora.library",
-      name: "Guest Reader",
-      passwordHash: "$2a$10$w09uY4hK5YjW7P9HkUaW1.K2c2E3OQ0gU3C5A6y1K8V0s7m4c2P1y",
-      role: "USER",
-    },
-  });
-  return guest.id;
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -34,6 +22,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = await resolveValidUser(searchParams.get("userId") || undefined);
     const bookParam = searchParams.get("bookId");
+
+    // Unauthenticated visitors have no private bookmarks
+    if (!userId) {
+      return NextResponse.json([]);
+    }
 
     const where: any = { userId };
     if (bookParam) {
@@ -73,6 +66,9 @@ export async function POST(request: Request) {
     }
 
     const userId = await resolveValidUser(body.userId);
+    if (!userId) {
+      return NextResponse.json({ error: "Please sign in to save bookmarks." }, { status: 401 });
+    }
 
     const bookmark = await prisma.bookmark.create({
       data: {
@@ -91,11 +87,15 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Please sign in to delete bookmarks." }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    await prisma.bookmark.delete({ where: { id } });
+    await prisma.bookmark.deleteMany({ where: { id, userId: user.id } });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
