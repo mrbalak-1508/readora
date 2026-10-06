@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useReader } from "@/context/ReaderContext";
 import {
   ArrowLeft,
-  List,
   Bookmark,
   Search,
   Sliders,
@@ -18,10 +17,13 @@ import {
   FileText,
   Lock,
   Sparkles,
+  Download,
+  ExternalLink,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 interface ReaderToolbarProps {
-  onOpenToc: () => void;
   onOpenBookmarks: () => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
@@ -29,13 +31,13 @@ interface ReaderToolbarProps {
   onUnlockBook?: () => void;
   spreadMode?: "single" | "dual";
   onToggleSpread?: () => void;
-  viewMode?: "flow" | "pdf";
-  onToggleViewMode?: () => void;
   hasPdfFile?: boolean;
+  zoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
 }
 
 export function ReaderToolbar({
-  onOpenToc,
   onOpenBookmarks,
   onOpenSearch,
   onOpenSettings,
@@ -43,9 +45,10 @@ export function ReaderToolbar({
   onUnlockBook,
   spreadMode = "dual",
   onToggleSpread,
-  viewMode = "flow",
-  onToggleViewMode,
   hasPdfFile = false,
+  zoom = 1.0,
+  onZoomIn,
+  onZoomOut,
 }: ReaderToolbarProps) {
   const {
     book,
@@ -79,25 +82,17 @@ export function ReaderToolbar({
   }[theme] || "bg-white/90 border-black/10 text-neutral-900";
 
   return (
-    <header className={`fixed top-3 left-3 right-3 sm:left-6 sm:right-6 max-w-5xl mx-auto z-40 h-13 rounded-2xl border backdrop-blur-xl px-3 sm:px-5 flex items-center justify-between gap-2 transition-all duration-300 ${themeBarClasses}`}>
-      {/* Left: Back & Table of contents */}
+    <header className={`fixed top-2 sm:top-3 left-2 right-2 sm:left-6 sm:right-6 max-w-5xl mx-auto z-40 h-12 sm:h-13 rounded-xl sm:rounded-2xl border backdrop-blur-xl px-2 sm:px-5 flex items-center justify-between gap-1.5 sm:gap-2 transition-all duration-300 ${themeBarClasses}`}>
+      {/* Left: Exit to Details */}
       <div className="flex items-center gap-1 sm:gap-2">
         <Link
           href={`/books/${book?.slug || ""}`}
-          className="p-1.5 sm:p-2 rounded-xl text-current opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-current opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 border border-current/15 transition-colors"
           title="Exit to Book Details"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline font-medium">Library</span>
         </Link>
-
-        <button
-          onClick={onOpenToc}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-current opacity-85 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 border border-current/15 transition-colors"
-          title="Table of Contents"
-        >
-          <List className="w-3.5 h-3.5 text-[var(--primary)]" />
-          <span className="hidden sm:inline font-medium">Contents</span>
-        </button>
       </div>
 
       {/* Center: Book & Chapter Info */}
@@ -107,9 +102,9 @@ export function ReaderToolbar({
             {book?.title}
           </div>
           {!hasFullAccess && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-white bg-gradient-to-r from-[#D95D4D] to-[#E97868] px-2 py-0.5 rounded-full shadow-xs shrink-0">
+            <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-bold text-white bg-gradient-to-r from-[#D95D4D] to-[#E97868] px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs shrink-0">
               <Lock className="w-2.5 h-2.5" />
-              Preview
+              <span>Preview</span>
             </span>
           )}
         </div>
@@ -120,37 +115,8 @@ export function ReaderToolbar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-1.5">
-        {/* Exact PDF vs Interactive Flow Switcher */}
-        {hasPdfFile && onToggleViewMode && (
-          <button
-            onClick={onToggleViewMode}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs ${
-              viewMode === "pdf"
-                ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-xs"
-                : "border-current/15 text-current opacity-85 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10"
-            }`}
-            title={
-              viewMode === "pdf"
-                ? "Switch back to Interactive Reflowable Reader"
-                : "View Exact Original PDF Document Facsimile"
-            }
-          >
-            {viewMode === "pdf" ? (
-              <>
-                <BookOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Flow Reader</span>
-              </>
-            ) : (
-              <>
-                <FileText className="w-3.5 h-3.5 text-blue-500" />
-                <span className="hidden sm:inline">Original PDF</span>
-              </>
-            )}
-          </button>
-        )}
-
         {/* Spread Mode Switcher (Single vs Dual Page Spread) */}
-        {viewMode === "flow" && onToggleSpread && (
+        {onToggleSpread && (
           <button
             onClick={onToggleSpread}
             className="p-1.5 sm:p-2 rounded-xl text-current opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors hidden md:flex items-center gap-1"
@@ -166,6 +132,7 @@ export function ReaderToolbar({
             </span>
           </button>
         )}
+
 
         {/* Quick Theme Swatches */}
         <div className="hidden sm:flex items-center gap-1 p-1 bg-current/5 rounded-xl border border-current/10">
@@ -193,7 +160,7 @@ export function ReaderToolbar({
         {/* Sound Toggle with state indicator */}
         <button
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+          className={`p-1.5 sm:p-2 rounded-xl transition-all hidden sm:flex items-center justify-center ${
             soundEnabled
               ? "text-[var(--primary)] bg-[var(--primary)]/10 border border-[var(--primary)]/20"
               : "text-current opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 border border-transparent"
@@ -210,7 +177,7 @@ export function ReaderToolbar({
         {/* Search Inside */}
         <button
           onClick={onOpenSearch}
-          className="p-1.5 sm:p-2 rounded-xl text-current opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          className="p-1.5 sm:p-2 rounded-xl text-current opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors hidden sm:flex items-center justify-center"
           title="Search in book"
         >
           <Search className="w-4 h-4" />
@@ -219,7 +186,7 @@ export function ReaderToolbar({
         {/* Bookmark Current Page */}
         <button
           onClick={toggleBookmark}
-          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
+          className={`p-1.5 sm:p-2 rounded-xl transition-colors flex items-center justify-center ${
             isBookmarked
               ? "text-[var(--coral)] bg-[var(--coral)]/10"
               : "text-current opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10"

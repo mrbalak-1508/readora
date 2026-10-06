@@ -12,14 +12,23 @@ import {
   Layers,
   Sparkles,
   Zap,
+  Bookmark,
+  Search,
 } from "lucide-react";
 
 interface ReaderSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenBookmarks?: () => void;
+  onOpenSearch?: () => void;
 }
 
-export function ReaderSettingsModal({ isOpen, onClose }: ReaderSettingsModalProps) {
+export function ReaderSettingsModal({
+  isOpen,
+  onClose,
+  onOpenBookmarks,
+  onOpenSearch,
+}: ReaderSettingsModalProps) {
   const {
     theme,
     setTheme,
@@ -48,11 +57,11 @@ export function ReaderSettingsModal({ isOpen, onClose }: ReaderSettingsModalProp
       <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
 
       <div className="relative w-full max-w-lg bg-[var(--card)] rounded-t-3xl sm:rounded-3xl border border-[var(--border)] p-6 shadow-2xl z-10 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-5">
+        <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-4">
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4 text-[var(--primary)]" />
             <h3 className="font-editorial text-lg font-bold text-[var(--foreground)]">
-              Reading Appearance & Audio
+              Reading Appearance & Tools
             </h3>
           </div>
           <button
@@ -62,6 +71,36 @@ export function ReaderSettingsModal({ isOpen, onClose }: ReaderSettingsModalProp
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Quick Tools Navigation Strip */}
+        {(onOpenBookmarks || onOpenSearch) && (
+          <div className="grid grid-cols-2 gap-2 pb-4 mb-4 border-b border-[var(--border)]">
+            {onOpenBookmarks && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenBookmarks();
+                }}
+                className="py-2.5 px-3 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--primary)] hover:text-white text-[var(--foreground)] border border-[var(--border)] flex flex-col items-center gap-1 text-xs font-semibold transition-all group"
+              >
+                <Bookmark className="w-4 h-4 text-[var(--coral)] group-hover:text-white transition-colors" />
+                <span className="text-[11px]">Bookmarks</span>
+              </button>
+            )}
+            {onOpenSearch && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenSearch();
+                }}
+                className="py-2.5 px-3 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--primary)] hover:text-white text-[var(--foreground)] border border-[var(--border)] flex flex-col items-center gap-1 text-xs font-semibold transition-all group"
+              >
+                <Search className="w-4 h-4 text-[var(--secondary)] group-hover:text-white transition-colors" />
+                <span className="text-[11px]">Search Inside</span>
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Reader Theme: 5 Themes (Paper, Warm, Sepia, Dark, Midnight) */}

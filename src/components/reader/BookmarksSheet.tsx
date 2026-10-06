@@ -11,7 +11,7 @@ interface BookmarksSheetProps {
 }
 
 export function BookmarksSheet({ isOpen, onClose }: BookmarksSheetProps) {
-  const { bookmarks, goToPage, toggleBookmark, currentPage, isBookmarked } = useReader();
+  const { bookmarks, goToPage, toggleBookmark, removeBookmark, currentPage, isBookmarked } = useReader();
 
   if (!isOpen) return null;
 
@@ -78,8 +78,18 @@ export function BookmarksSheet({ isOpen, onClose }: BookmarksSheetProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeBookmark(bm.page);
+                    }}
+                    className="p-1.5 rounded-lg text-[var(--text-subtle)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 opacity-50 group-hover:opacity-100 transition-all"
+                    title="Delete Bookmark"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--accent)] opacity-60 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             ))

@@ -18,7 +18,7 @@ export function SearchInsideSheet({ isOpen, onClose }: SearchInsideSheetProps) {
     const q = query.toLowerCase();
     const results: { page: number; chapterTitle: string; snippet: string }[] = [];
 
-    // Search through chapters
+    // Search through chapter content
     book.chapters?.forEach((ch) => {
       if (ch.content) {
         const text = ch.content;
@@ -38,6 +38,37 @@ export function SearchInsideSheet({ isOpen, onClose }: SearchInsideSheetProps) {
           startIndex += q.length;
           count++;
         }
+      } else if (ch.title.toLowerCase().includes(q)) {
+        results.push({
+          page: ch.page,
+          chapterTitle: ch.title,
+          snippet: `Chapter heading: "${ch.title}"`,
+        });
+      }
+    });
+
+    // Search in sample content if available
+    if (book.sampleContent && book.sampleContent.toLowerCase().includes(q)) {
+      const text = book.sampleContent;
+      const lower = text.toLowerCase();
+      const idx = lower.indexOf(q);
+      const from = Math.max(0, idx - 40);
+      const to = Math.min(text.length, idx + q.length + 60);
+      results.push({
+        page: 1,
+        chapterTitle: "Sample Content / Introduction",
+        snippet: "..." + text.substring(from, to).replace(/\n/g, " ") + "...",
+      });
+    }
+
+    // Search table of contents
+    book.tableOfContents?.forEach((toc) => {
+      if (toc.title.toLowerCase().includes(q) && !results.some((r) => r.page === toc.page)) {
+        results.push({
+          page: toc.page,
+          chapterTitle: toc.title,
+          snippet: `Section entry: "${toc.title}"`,
+        });
       }
     });
 

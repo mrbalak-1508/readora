@@ -18,6 +18,7 @@ import {
   X,
   Check,
   BookOpen,
+  MessageSquare,
 } from "lucide-react";
 import { showSuccessAlert, showErrorAlert, showConfirmAlert, showToastAlert } from "@/lib/alerts";
 
@@ -28,6 +29,8 @@ interface BookData {
   author: string;
   description?: string;
   categoryName: string;
+  rating?: number;
+  ratingCount?: number;
   categoryId?: string;
   language: string;
   pages: number;
@@ -383,8 +386,17 @@ export default function AdminBooksPage() {
                             <div className="text-[11px] text-[var(--muted)] truncate">
                               by {book.author}
                             </div>
-                            <div className="text-[10px] text-[var(--muted)] mt-0.5">
-                              {book.readCount || 0} completions recorded
+                            <div className="text-[10px] text-[var(--muted)] mt-0.5 flex items-center gap-2">
+                              <span>{book.readCount || 0} reads</span>
+                              <span>•</span>
+                              <Link
+                                href={`/admin/reviews?bookId=${book.id}`}
+                                className="text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center gap-0.5 font-bold"
+                                title="Inspect reader reviews for this book"
+                              >
+                                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                <span>{(book.rating || 5).toFixed(1)} ({book.ratingCount || 0})</span>
+                              </Link>
                             </div>
                           </div>
                         </div>
@@ -446,6 +458,14 @@ export default function AdminBooksPage() {
 
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/admin/reviews?bookId=${book.id}`}
+                            className="p-2 rounded-xl text-[var(--muted)] hover:text-amber-600 hover:bg-[var(--background)] transition-colors"
+                            title="Inspect Reviews for this Volume"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Link>
+
                           <Link
                             href={`/books/${book.slug}`}
                             className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"

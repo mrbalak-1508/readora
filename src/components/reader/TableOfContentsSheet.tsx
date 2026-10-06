@@ -14,7 +14,17 @@ export function TableOfContentsSheet({ isOpen, onClose }: TableOfContentsSheetPr
 
   if (!isOpen || !book) return null;
 
-  const toc = book.tableOfContents || [];
+  const rawToc =
+    book.tableOfContents && book.tableOfContents.length > 0
+      ? book.tableOfContents
+      : book.chapters && book.chapters.length > 0
+      ? book.chapters.map((ch) => ({ title: ch.title, page: ch.page }))
+      : Array.from({ length: Math.min(book.pages || 1, 20) }, (_, i) => ({
+          title: i === 0 ? "Cover Page" : `Section / Page ${i + 1}`,
+          page: i + 1,
+        }));
+
+  const toc = rawToc;
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch">
@@ -46,7 +56,7 @@ export function TableOfContentsSheet({ isOpen, onClose }: TableOfContentsSheetPr
         <div className="flex-1 overflow-y-auto space-y-1 pr-1">
           {toc.length > 0 ? (
             toc.map((item, idx) => {
-              const isCurrent = currentPage >= item.page;
+              const isCurrent = currentPage >= item.page && (idx === toc.length - 1 || currentPage < (toc[idx + 1]?.page || Infinity));
               return (
                 <button
                   key={idx}
@@ -56,7 +66,7 @@ export function TableOfContentsSheet({ isOpen, onClose }: TableOfContentsSheetPr
                   }}
                   className={`w-full text-left p-3 rounded-xl text-xs flex items-center justify-between gap-3 transition-colors ${
                     isCurrent
-                      ? "bg-[var(--accent-light)] text-[var(--accent)] font-medium"
+                      ? "bg-[var(--accent-light)] text-[var(--accent)] font-semibold"
                       : "hover:bg-[var(--bg-subtle)] text-[var(--text-main)]"
                   }`}
                 >

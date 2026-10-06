@@ -5,6 +5,7 @@ import Tesseract from "tesseract.js";
 import path from "path";
 import { pathToFileURL } from "url";
 import zlib from "zlib";
+import { extractPdfMetadata } from "@/lib/pdf/metadata";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const forceOcr = formData.get("ocr") === "true";
+    const mode = (formData.get("mode") as string) || request.nextUrl.searchParams.get("mode") || "full";
 
     if (!file) {
       return NextResponse.json({ error: "No manuscript file provided." }, { status: 400 });
@@ -190,10 +192,34 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // 2. Extract rich PDF metadata (total page count, title, author, dates, language)
+      let pdfMeta = await extractPdfMetadata(buffer, fileName);
+
+      // Fast metadata-only mode for instant file selection handling
+      if (mode === "metadata") {
+        return NextResponse.json({
+          success: true,
+          format: "PDF",
+          fileName,
+          fileSize: file.size,
+          title: pdfMeta.title || cleanTitleFromFilename(fileName),
+          author: pdfMeta.author || "",
+          pages: pdfMeta.pageCount,
+          publicationDate: pdfMeta.creationDate || null,
+          sampleContent: "",
+          extractedPages: [],
+          detectedLanguage: pdfMeta.language || "English",
+          languageLabel: pdfMeta.language === "Hindi" ? "Hindi (हिंदी)" : "English",
+          isScanned: false,
+          extractionMethod: "native_unicode",
+          metadata: pdfMeta,
+        });
+      }
+
       let extractedText = "";
-      let pageCount = 1;
-      let rawTitle = "";
-      let rawAuthor = "";
+      let pageCount = pdfMeta.pageCount;
+      let rawTitle = pdfMeta.title || "";
+      let rawAuthor = pdfMeta.author || "";
       let isScanned = false;
       let extractionMethod: "native_unicode" | "ocr" = "native_unicode";
       let extractedPages: { pageNumber: number; title: string; content: string }[] = [];
@@ -207,11 +233,17 @@ export async function POST(request: NextRequest) {
         const info = await parser.getInfo();
         const textResult = await parser.getText();
 
-        pageCount = info && info.total > 0 ? info.total : textResult?.total || 1;
+        if (info && info.total > 0) {
+          pageCount = Math.max(pageCount, info.total);
+        } else if (textResult?.total) {
+          pageCount = Math.max(pageCount, textResult.total);
+        }
 
-        if (info?.info) {
-          rawTitle = info.info.Title || "";
-          rawAuthor = info.info.Author || "";
+        if (!rawTitle && info?.info?.Title) {
+          rawTitle = info.info.Title;
+        }
+        if (!rawAuthor && info?.info?.Author) {
+          rawAuthor = info.info.Author;
         }
 
         if (textResult?.text) {
@@ -390,13 +422,15 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         title: finalTitle,
         author: finalAuthor,
-        pages: extractedPages.length > 0 ? extractedPages.length : pageCount,
+        pages: pageCount,
+        publicationDate: pdfMeta.creationDate || null,
         sampleContent: formattedSample,
         extractedPages,
         detectedLanguage: languageInfo.language,
         languageLabel: languageInfo.label,
         isScanned,
         extractionMethod,
+        metadata: pdfMeta,
       });
     }
 

@@ -41,35 +41,75 @@ export async function GET(
         hasFullAccess = true;
         accessReason = "ADMIN_PRIVILEGE";
       } else {
-        // Check direct entitlement (purchase or gift)
-        const entitlement = await prisma.bookEntitlement.findUnique({
+        // Check direct entitlement (purchase or gift) by id or slug
+        const entitlement = await prisma.bookEntitlement.findFirst({
           where: {
-            userId_bookId: {
-              userId: user.id,
-              bookId: book.id,
-            },
+            userId: user.id,
+            active: true,
+            OR: [
+              { bookId: book.id },
+              ...(book.slug ? [{ bookId: book.slug }] : []),
+            ],
           },
         });
 
-        if (entitlement && entitlement.active) {
+        if (entitlement) {
           hasFullAccess = true;
           accessReason = "PURCHASED";
         } else {
-          // Check active subscription if eligible
-          const activeSub = await prisma.subscription.findFirst({
+          // Check paid order
+          const paidOrder = await prisma.order.findFirst({
             where: {
               userId: user.id,
-              status: "ACTIVE",
-              currentPeriodEnd: { gte: new Date() },
+              status: "PAID",
+              items: {
+                some: {
+                  OR: [
+                    { bookId: book.id },
+                    ...(book.slug ? [{ bookId: book.slug }] : []),
+                  ],
+                },
+              },
             },
           });
 
-          if (
-            activeSub &&
-            ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(book.accessType)
-          ) {
+          if (paidOrder) {
             hasFullAccess = true;
-            accessReason = "ACTIVE_SUBSCRIPTION";
+            accessReason = "PURCHASED";
+            // Ensure entitlement is synced in database
+            await prisma.bookEntitlement.upsert({
+              where: {
+                userId_bookId: {
+                  userId: user.id,
+                  bookId: book.id,
+                },
+              },
+              update: { active: true, source: "PURCHASE", orderId: paidOrder.id },
+              create: {
+                userId: user.id,
+                bookId: book.id,
+                orderId: paidOrder.id,
+                source: "PURCHASE",
+                active: true,
+              },
+            }).catch(() => {});
+          } else {
+            // Check active subscription if eligible
+            const activeSub = await prisma.subscription.findFirst({
+              where: {
+                userId: user.id,
+                status: "ACTIVE",
+                currentPeriodEnd: { gte: new Date() },
+              },
+            });
+
+            if (
+              activeSub &&
+              ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(book.accessType)
+            ) {
+              hasFullAccess = true;
+              accessReason = "ACTIVE_SUBSCRIPTION";
+            }
           }
         }
       }

@@ -41,6 +41,7 @@ interface ReaderContextType {
   bookmarks: Bookmark[];
   isBookmarked: boolean;
   toggleBookmark: () => void;
+  removeBookmark: (page: number) => void;
   goToPage: (page: number, chapterTitle?: string) => void;
   nextPage: () => void;
   prevPage: () => void;
@@ -57,9 +58,11 @@ const ReaderContext = createContext<ReaderContextType | undefined>(undefined);
 
 export function ReaderProvider({
   book: initialBook,
+  initialHasFullAccess,
   children,
 }: {
   book: Book;
+  initialHasFullAccess?: boolean;
   children: React.ReactNode;
 }) {
   const [book, setBook] = useState<Book>(initialBook);
@@ -67,8 +70,8 @@ export function ReaderProvider({
   const [currentChapterTitle, setCurrentChapterTitle] = useState<string>("");
   const [theme, setTheme] = useState<ReaderTheme>("paper");
   const [font, setFont] = useState<ReaderFont>("serif");
-  const [fontSize, setFontSize] = useState<number>(18);
-  const [lineHeight, setLineHeight] = useState<number>(1.75);
+  const [fontSize, setFontSize] = useState<number>(16);
+  const [lineHeight, setLineHeight] = useState<number>(1.65);
   const [textAlign, setTextAlign] = useState<"left" | "justify">("left");
   const [pageMode, setPageMode] = useState<"scroll" | "paged">("paged");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(false);
@@ -77,9 +80,10 @@ export function ReaderProvider({
   const [animationSpeed, setAnimationSpeedState] = useState<AnimationSpeed>("normal");
   const isInitiallyFree =
     initialBook.accessType === "FREE" || (initialBook.price === 0 && !initialBook.accessType);
-  const [hasFullAccess, setHasFullAccess] = useState<boolean>(isInitiallyFree);
+  const effectiveFull = initialHasFullAccess !== undefined ? initialHasFullAccess : isInitiallyFree;
+  const [hasFullAccess, setHasFullAccess] = useState<boolean>(effectiveFull);
   const [previewLimit, setPreviewLimit] = useState<number | null>(
-    !isInitiallyFree ? initialBook.previewPages || 10 : null
+    !effectiveFull ? initialBook.previewPages || 10 : null
   );
   const [watermarkText, setWatermarkText] = useState<string | null>(null);
 
@@ -118,14 +122,29 @@ export function ReaderProvider({
 
     // Load server access & preview limits
     async function checkAccess() {
+      // Check local storage library items first
+      const localLibrary = store.getLibrary();
+      const localPurchased = localLibrary.some(
+        (item) =>
+          (item.bookId === initialBook.id || item.bookId === initialBook.slug) &&
+          (item.status === "purchased" || (item as any).isPurchased)
+      );
+
+      if (localPurchased) {
+        setHasFullAccess(true);
+        setPreviewLimit(null);
+      }
+
       try {
         const res = await fetch(`/api/books/${initialBook.id}/access`);
         if (res.ok) {
           const data = await res.json();
-          const full = Boolean(data.hasFullAccess);
+          const full = Boolean(data.hasFullAccess) || localPurchased;
           setHasFullAccess(full);
           setWatermarkText(data.watermark || null);
-          if (!full) {
+          if (full) {
+            setPreviewLimit(null);
+          } else {
             setPreviewLimit(data.preview?.allowedPages || initialBook.previewPages || 10);
             setIsCompleted(false);
           }
@@ -316,6 +335,12 @@ export function ReaderProvider({
     }
   };
 
+  const removeBookmark = (page: number) => {
+    if (!book) return;
+    store.removeBookmark(book.id, page);
+    setBookmarks((prev) => prev.filter((b) => b.page !== page));
+  };
+
   // Highlights
   const addHighlight = (text: string, color: Highlight["color"], note?: string) => {
     if (!book) return;
@@ -388,6 +413,7 @@ export function ReaderProvider({
         bookmarks,
         isBookmarked,
         toggleBookmark,
+        removeBookmark,
         goToPage,
         nextPage,
         prevPage,

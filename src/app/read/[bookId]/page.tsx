@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ReaderProvider } from "@/context/ReaderContext";
 import { ReaderView } from "@/components/reader/ReaderView";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth/session";
 import { MOCK_BOOKS } from "@/lib/data/mockBooks";
 import { Book } from "@/lib/types";
 
@@ -34,8 +35,11 @@ export default async function ReadPage({ params }: PageProps) {
   const { bookId } = await params;
 
   let book: Book | null = null;
+  let initialHasFullAccess = false;
 
   try {
+    const user = await getCurrentUser();
+
     const dbBook = await prisma.book.findFirst({
       where: {
         OR: [{ id: bookId }, { slug: bookId }],
@@ -48,6 +52,67 @@ export default async function ReadPage({ params }: PageProps) {
     });
 
     if (dbBook) {
+      // Determine server-side entitlement
+      if (dbBook.accessType === "FREE" || dbBook.price === 0) {
+        initialHasFullAccess = true;
+      } else if (user) {
+        if (user.role === "ADMIN") {
+          initialHasFullAccess = true;
+        } else {
+          // Check BookEntitlement
+          const entitlement = await prisma.bookEntitlement.findFirst({
+            where: {
+              userId: user.id,
+              active: true,
+              OR: [
+                { bookId: dbBook.id },
+                ...(dbBook.slug ? [{ bookId: dbBook.slug }] : []),
+              ],
+            },
+          });
+
+          if (entitlement) {
+            initialHasFullAccess = true;
+          } else {
+            // Check paid Order
+            const paidOrder = await prisma.order.findFirst({
+              where: {
+                userId: user.id,
+                status: "PAID",
+                items: {
+                  some: {
+                    OR: [
+                      { bookId: dbBook.id },
+                      ...(dbBook.slug ? [{ bookId: dbBook.slug }] : []),
+                    ],
+                  },
+                },
+              },
+            });
+
+            if (paidOrder) {
+              initialHasFullAccess = true;
+            } else {
+              // Check active subscription
+              const activeSub = await prisma.subscription.findFirst({
+                where: {
+                  userId: user.id,
+                  status: "ACTIVE",
+                  currentPeriodEnd: { gte: new Date() },
+                },
+              });
+
+              if (
+                activeSub &&
+                ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(dbBook.accessType)
+              ) {
+                initialHasFullAccess = true;
+              }
+            }
+          }
+        }
+      }
+
       book = {
         ...dbBook,
         isbn: dbBook.isbn || undefined,
@@ -57,6 +122,7 @@ export default async function ReadPage({ params }: PageProps) {
         categoryName: dbBook.categoryName || "Curated",
         coverUrl: dbBook.coverPath || "/placeholder-cover.jpg",
         fileUrl: dbBook.filePath || undefined,
+        fileName: dbBook.fileName || undefined,
         fileSize: dbBook.fileSize ?? undefined,
         sampleContent: dbBook.sampleContent || undefined,
         tags: JSON.parse(dbBook.tags || "[]"),
@@ -66,7 +132,7 @@ export default async function ReadPage({ params }: PageProps) {
         discount: dbBook.discount,
         currency: dbBook.currency,
         previewType: dbBook.previewType as any,
-        previewPages: dbBook.previewPages,
+        previewPages: initialHasFullAccess ? 0 : dbBook.previewPages,
         format: (dbBook.format || "interactive").toLowerCase() as any,
         chapters: dbBook.chapters.map((ch) => ({
           id: ch.id,
@@ -90,6 +156,9 @@ export default async function ReadPage({ params }: PageProps) {
     const found = MOCK_BOOKS.find((b) => b.id === bookId || b.slug === bookId);
     if (found) {
       book = found;
+      if (found.price === 0 || found.accessType === "FREE") {
+        initialHasFullAccess = true;
+      }
     }
   }
 
@@ -98,7 +167,7 @@ export default async function ReadPage({ params }: PageProps) {
   }
 
   return (
-    <ReaderProvider book={book}>
+    <ReaderProvider book={book} initialHasFullAccess={initialHasFullAccess}>
       <ReaderView />
     </ReaderProvider>
   );

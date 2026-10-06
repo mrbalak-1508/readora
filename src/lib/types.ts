@@ -70,7 +70,8 @@ export interface Book {
   author_id?: string;
   description: string;
   coverUrl: string;
-  fileUrl?: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
   format: "epub" | "pdf" | "interactive" | "EPUB" | "PDF" | "INTERACTIVE" | string;
   isbn?: string;
   language: "English" | "Hindi" | "Other" | string;

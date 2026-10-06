@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { validateAndExtractFile, saveSecureFile } from "@/lib/storage";
+import { extractPdfMetadata } from "@/lib/pdf/metadata";
 
 function generateSlug(title: string): string {
   return title
@@ -74,11 +75,36 @@ export async function POST(request: NextRequest) {
     let savedBookMime: string | null = null;
     let savedBookSize: number | null = null;
 
+    let detectedPdfPages: number | null = null;
+    let detectedPdfAuthor: string | null = null;
+    let detectedPdfDate: string | null = null;
+
     const bookFile = formData.get("bookFile") as File | null;
     if (bookFile && bookFile.size > 0) {
       const validation = await validateAndExtractFile(bookFile, "book");
       if (validation.error || !validation.file) {
         return NextResponse.json({ error: validation.error || "Invalid book file" }, { status: 400 });
+      }
+
+      // Automatically inspect PDF metadata if uploaded file is a genuine PDF
+      if (
+        validation.file.mimeType === "application/pdf" ||
+        validation.file.fileName.toLowerCase().endsWith(".pdf")
+      ) {
+        try {
+          const meta = await extractPdfMetadata(validation.file.buffer, validation.file.fileName);
+          if (meta.pageCount && meta.pageCount > 0) {
+            detectedPdfPages = meta.pageCount;
+          }
+          if (meta.author) {
+            detectedPdfAuthor = meta.author;
+          }
+          if (meta.creationDate) {
+            detectedPdfDate = meta.creationDate;
+          }
+        } catch (pdfErr) {
+          console.warn("Could not inspect uploaded PDF for metadata:", pdfErr);
+        }
       }
 
       const saved = await saveSecureFile(validation.file, "books");
@@ -111,12 +137,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Connect or create Author
-    let authorSlug = generateSlug(author);
+    const resolvedAuthor =
+      (!author || author === "Unknown Author" || author === "Curated Author") && detectedPdfAuthor
+        ? detectedPdfAuthor
+        : author;
+    let authorSlug = generateSlug(resolvedAuthor);
     let authorRecord = await prisma.author.findUnique({ where: { slug: authorSlug } });
     if (!authorRecord) {
       authorRecord = await prisma.author.create({
         data: {
-          name: author,
+          name: resolvedAuthor,
           slug: authorSlug,
           bio: `Distinguished author in the Readora library.`,
         },
@@ -132,14 +162,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const calculatedPages = pagesList.length > 0 ? pagesList.length : (isNaN(pages) ? 200 : pages);
+    // Prioritize detected PDF page count if available, otherwise extracted chapters, otherwise form value
+    const calculatedPages =
+      detectedPdfPages && detectedPdfPages > 0
+        ? detectedPdfPages
+        : pagesList.length > 0
+        ? pagesList.length
+        : isNaN(pages) || pages <= 0
+        ? 200
+        : pages;
+
+    const resolvedPublicationDate =
+      detectedPdfDate && (!publicationDate || publicationDate === new Date().toISOString().split("T")[0])
+        ? detectedPdfDate
+        : publicationDate;
 
     // 8. Create Book record in SQLite
     const newBook = await prisma.book.create({
       data: {
         slug: uniqueSlug,
         title,
-        author,
+        author: resolvedAuthor,
         authorId: authorRecord.id,
         description,
         coverPath,
@@ -154,7 +197,7 @@ export async function POST(request: NextRequest) {
         categoryName,
         tags: JSON.stringify(tagsArray),
         publisher,
-        publicationDate,
+        publicationDate: resolvedPublicationDate,
         pages: calculatedPages,
         featured,
         status,
@@ -172,8 +215,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 9. Save Sequential Pages into Chapter Records
-    if (pagesList.length > 0) {
+    // 9. Save Sequential Pages into Chapter Records (Only for reflowable/extracted text, not for direct PDF)
+    if (pagesList.length > 0 && format !== "PDF") {
       for (let i = 0; i < pagesList.length; i++) {
         const p = pagesList[i];
         await prisma.chapter.create({
@@ -186,7 +229,7 @@ export async function POST(request: NextRequest) {
           },
         });
       }
-    } else if (sampleContent) {
+    } else if (sampleContent && format !== "PDF" && !savedBookFilePath) {
       await prisma.chapter.create({
         data: {
           bookId: newBook.id,

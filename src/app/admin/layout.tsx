@@ -24,6 +24,7 @@ import {
   Sliders,
   Cookie,
   Home,
+  MessageSquare,
 } from "lucide-react";
 import { showToastAlert, showConfirmAlert } from "@/lib/alerts";
 
@@ -33,6 +34,7 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
   const links = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Book Catalog", href: "/admin/books", icon: BookOpen },
+    { label: "Reader Reviews", href: "/admin/reviews", icon: MessageSquare },
     { label: "Orders & Sales", href: "/admin/orders", icon: ShoppingBag },
     { label: "Sales Dashboard", href: "/admin/sales", icon: BarChart3 },
     { label: "Subscriptions", href: "/admin/subscriptions", icon: Sparkles },

@@ -47,15 +47,8 @@ next-env.d.ts
 *.sqlite
 *.sqlite3
 
-# local storage uploads
-/storage/books/*
-!/storage/books/.gitkeep
-/storage/covers/*
-!/storage/covers/.gitkeep
-/storage/avatars/*
-!/storage/avatars/.gitkeep
-/storage/exports/*
-!/storage/exports/.gitkeep
+# local storage uploads (tracked)
+!/storage/**
 
 # OCR traineddata models
 *.traineddata

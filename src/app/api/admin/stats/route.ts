@@ -25,6 +25,7 @@ export async function GET() {
       categories,
       allUsers,
       allProgress,
+      totalReviews,
     ] = await Promise.all([
       prisma.book.count(),
       prisma.book.count({ where: { status: "PUBLISHED" } }),
@@ -86,6 +87,7 @@ export async function GET() {
       prisma.readingProgress.findMany({
         select: { updatedAt: true, timeSpentSeconds: true, completed: true },
       }),
+      prisma.review.count(),
     ]);
 
     const totalSeconds = progressAggregate._sum.timeSpentSeconds || 0;
@@ -130,6 +132,7 @@ export async function GET() {
       draftBooks,
       archivedBooks,
       totalUsers,
+      totalReviews,
       activeReaders,
       booksCompleted,
       readingHours,

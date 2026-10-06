@@ -21,6 +21,7 @@ import {
   Sparkles,
   BarChart2,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 import { showSuccessAlert, showToastAlert } from "@/lib/alerts";
 
@@ -43,6 +44,7 @@ interface AdminStats {
   draftBooks: number;
   archivedBooks: number;
   totalUsers: number;
+  totalReviews?: number;
   activeReaders: number;
   booksCompleted: number;
   readingHours: string;
@@ -143,6 +145,14 @@ export default function AdminDashboardPage() {
       sub: "Logged reader time",
       color: "text-purple-600",
     },
+    {
+      label: "Reader Reviews",
+      value: stats?.totalReviews !== undefined ? stats.totalReviews.toString() : "...",
+      icon: MessageSquare,
+      sub: "Community feedback",
+      color: "text-amber-500",
+      href: "/admin/reviews",
+    },
   ];
 
   // Maximum value for SVG chart scaling
@@ -195,17 +205,20 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards (5 KPIs) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Stats Cards (6 KPIs) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {statCards.map((item, idx) => {
           const Icon = item.icon;
-          return (
+          const content = (
             <div
-              key={idx}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 shadow-xs transition-all hover:shadow-md"
+              className={`bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 shadow-xs transition-all hover:shadow-md h-full ${
+                (item as any).href ? "hover:border-[var(--primary)] group cursor-pointer" : ""
+              }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--muted)]">{item.label}</span>
+                <span className="text-xs font-bold text-[var(--muted)] group-hover:text-[var(--primary)] transition-colors">
+                  {item.label}
+                </span>
                 <div className={`p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] ${item.color}`}>
                   <Icon className="w-4 h-4" />
                 </div>
@@ -215,6 +228,14 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-[11px] text-[var(--muted)] mt-1 font-medium">{item.sub}</div>
             </div>
+          );
+
+          return (item as any).href ? (
+            <Link key={idx} href={(item as any).href}>
+              {content}
+            </Link>
+          ) : (
+            <div key={idx}>{content}</div>
           );
         })}
       </div>

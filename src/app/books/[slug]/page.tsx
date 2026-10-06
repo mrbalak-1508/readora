@@ -8,6 +8,7 @@ import { Navbar } from "@/components/navigation/Navbar";
 import { Footer } from "@/components/navigation/Footer";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { BookCard } from "@/components/books/BookCard";
+import { BookReviewsSection } from "@/components/books/BookReviewsSection";
 import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import { store } from "@/lib/data/storage";
 import { Book } from "@/lib/types";
@@ -266,13 +267,16 @@ export default function BookDetailPage() {
 
                 {/* Rating & Engagement */}
                 <div className="mt-4 flex items-center gap-4 text-xs sm:text-sm">
-                  <div className="flex items-center gap-1 text-amber-500 font-bold">
-                    <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    <span>{book.rating.toFixed(2)}</span>
+                  <a
+                    href="#reviews-section"
+                    className="flex items-center gap-1 text-amber-500 font-bold hover:underline cursor-pointer group"
+                  >
+                    <Star className="w-4 h-4 fill-amber-500 text-amber-500 group-hover:scale-110 transition-transform" />
+                    <span>{book.rating.toFixed(1)}</span>
                     <span className="text-[var(--muted)] font-normal text-xs">
-                      ({book.ratingCount} reviews)
+                      ({book.ratingCount} {book.ratingCount === 1 ? "review" : "reviews"})
                     </span>
-                  </div>
+                  </a>
                   <span className="text-[var(--muted)] opacity-40">•</span>
                   <div className="text-[var(--muted)]">
                     <span className="font-bold text-[var(--foreground)]">{book.readCount.toLocaleString()}</span> readers
@@ -432,6 +436,14 @@ export default function BookDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Reader Reviews & Literary Impressions Section */}
+          <BookReviewsSection
+            bookId={book.id}
+            bookTitle={book.title}
+            initialRating={book.rating}
+            initialRatingCount={book.ratingCount}
+          />
 
           {/* Related Books */}
           {relatedBooks.length > 0 && (

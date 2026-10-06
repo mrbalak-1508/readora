@@ -24,8 +24,20 @@ import {
   RefreshCw,
   Eye,
   Edit3,
+  ExternalLink,
 } from "lucide-react";
 import { showSuccessAlert, showErrorAlert } from "@/lib/alerts";
+
+function cleanTitleFromFilename(fileName: string): string {
+  const withoutExt = fileName.replace(/\.[^/.]+$/, "");
+  return withoutExt
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export default function NewBookWizard() {
   const router = useRouter();
@@ -42,6 +54,7 @@ export default function NewBookWizard() {
     "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=800"
   );
   const [bookFile, setBookFile] = useState<File | null>(null);
+  const [directPdfPreviewUrl, setDirectPdfPreviewUrl] = useState<string | null>(null);
 
   // PDF Pre-upload parsing & preview state
   const [parsingBook, setParsingBook] = useState(false);
@@ -55,11 +68,13 @@ export default function NewBookWizard() {
     format: string;
     fileSize: number;
     fileName: string;
+    publicationDate?: string | null;
     detectedLanguage?: "Hindi" | "English" | "Other";
     languageLabel?: string;
     isScanned?: boolean;
     extractionMethod?: "native_unicode" | "ocr";
     extractedPages?: Array<{ pageNumber: number; title: string; content: string }>;
+    metadata?: any;
   } | null>(null);
 
   // Sequential Pages State for Page-by-Page formatting and verification
@@ -162,6 +177,56 @@ export default function NewBookWizard() {
     }
 
     setBookFile(file);
+
+    // Direct PDF Upload: Fetch PDF Metadata (especially page count, title, author, date) while preserving PDF 100% As-Is
+    if (isPdf) {
+      const derivedTitle = cleanTitleFromFilename(file.name);
+      if (directPdfPreviewUrl) {
+        URL.revokeObjectURL(directPdfPreviewUrl);
+      }
+      setDirectPdfPreviewUrl(URL.createObjectURL(file));
+      setExtractedPages([]); // Keep empty so no fake extracted text chapters are generated
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title.trim() ? prev.title : derivedTitle,
+        slug: prev.title.trim() ? prev.slug : generateSlug(derivedTitle),
+        format: "PDF",
+      }));
+
+      // Immediately auto-fetch PDF metadata (page count, title, author, date)
+      setParsingBook(true);
+      try {
+        const data = new FormData();
+        data.append("file", file);
+        data.append("mode", "metadata");
+
+        const res = await fetch("/api/admin/books/parse-pdf", {
+          method: "POST",
+          body: data,
+        });
+
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+          setParsedPreview(resData);
+          setFormData((prev) => ({
+            ...prev,
+            title: prev.title.trim() && prev.title !== derivedTitle ? prev.title : resData.title || prev.title,
+            slug: prev.title.trim() && prev.title !== derivedTitle ? prev.slug : generateSlug(resData.title || derivedTitle),
+            author: resData.author ? resData.author : prev.author,
+            pages: resData.pages && resData.pages > 0 ? resData.pages : prev.pages,
+            publicationDate: resData.publicationDate || prev.publicationDate,
+            language: resData.detectedLanguage || prev.language,
+          }));
+        }
+      } catch (metaErr: any) {
+        console.warn("Could not auto-fetch PDF metadata:", metaErr);
+      } finally {
+        setParsingBook(false);
+      }
+      return;
+    }
+
     setParsingBook(true);
 
     try {
@@ -191,13 +256,62 @@ export default function NewBookWizard() {
         title: prev.title.trim() ? prev.title : resData.title,
         slug: prev.title.trim() ? prev.slug : generateSlug(resData.title),
         author: resData.author ? resData.author : (prev.author || "Curated Author"),
-        pages: resData.extractedPages?.length || resData.pages || prev.pages,
+        pages: resData.pages || resData.extractedPages?.length || prev.pages,
         format: resData.format as any,
         sampleContent: resData.sampleContent || prev.sampleContent,
         language: (resData.detectedLanguage as any) || prev.language,
       }));
     } catch (err: any) {
-      setParseError(err.message || "Failed to parse PDF contents. You can still proceed or try another file.");
+      setParseError(err.message || "Failed to parse file contents. You can still proceed or try another file.");
+    } finally {
+      setParsingBook(false);
+    }
+  };
+
+  // Optional manual PDF text extraction (if user wants reflowable reader chapters)
+  const handleExtractPdfText = async () => {
+    if (!bookFile) return;
+    setParsingBook(true);
+    setParseError("");
+
+    try {
+      const data = new FormData();
+      data.append("file", bookFile);
+
+      const res = await fetch("/api/admin/books/parse-pdf", {
+        method: "POST",
+        body: data,
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to inspect file structure.");
+      }
+
+      setParsedPreview(resData);
+
+      if (resData.extractedPages && Array.isArray(resData.extractedPages)) {
+        setExtractedPages(resData.extractedPages);
+        setSelectedPageIndex(0);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title.trim() ? prev.title : resData.title,
+        slug: prev.title.trim() ? prev.slug : generateSlug(resData.title),
+        author: resData.author ? resData.author : (prev.author || "Curated Author"),
+        pages: resData.pages || resData.extractedPages?.length || prev.pages,
+        sampleContent: resData.sampleContent || prev.sampleContent,
+        language: (resData.detectedLanguage as any) || prev.language,
+      }));
+
+      showSuccessAlert(
+        "Text Extracted",
+        `Parsed ${resData.extractedPages?.length || 0} pages from PDF for reflowable viewing.`
+      );
+    } catch (err: any) {
+      setParseError(err.message || "Failed to extract text from PDF.");
+      showErrorAlert("Extraction Error", err.message || "Could not extract text.");
     } finally {
       setParsingBook(false);
     }
@@ -235,7 +349,7 @@ export default function NewBookWizard() {
         ...prev,
         title: resData.title || prev.title,
         author: resData.author || prev.author,
-        pages: resData.extractedPages?.length || resData.pages || prev.pages,
+        pages: resData.pages || prev.pages,
         sampleContent: resData.sampleContent || prev.sampleContent,
         language: (resData.detectedLanguage as any) || prev.language,
       }));
@@ -385,10 +499,10 @@ export default function NewBookWizard() {
       data.append("previewType", formData.previewType);
       data.append("previewPages", formData.previewPages.toString());
       data.append("watermarkEnabled", formData.watermarkEnabled.toString());
-      if (formData.sampleContent) {
+      if (formData.sampleContent && formData.format !== "PDF") {
         data.append("sampleContent", formData.sampleContent);
       }
-      if (extractedPages.length > 0) {
+      if (extractedPages.length > 0 && formData.format !== "PDF") {
         data.append("pagesData", JSON.stringify(extractedPages));
       }
 
@@ -807,8 +921,187 @@ export default function NewBookWizard() {
                 </div>
               )}
 
-              {/* Verified Content Preview & Immediate Correction Panel */}
-              {parsedPreview && !parsingBook && (
+              {/* DIRECT PDF MANUSCRIPT CARD (Preserved 100% As-Is, No Text Extraction) */}
+              {bookFile && formData.format === "PDF" && !extractedPages.length && !parsingBook && (
+                <div className="p-6 rounded-3xl bg-[var(--bg-subtle)]/80 border border-[var(--border)] shadow-xs space-y-5 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border)]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-[var(--foreground)]">
+                            Direct PDF Manuscript Ready (Preserved 100% As-Is)
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/30">
+                            ⚡ Built-in PDF Reader
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-[var(--muted)] mt-0.5 block">
+                          This PDF will be displayed directly in the PDF Reader without extracting, altering, or converting text. Original typography, formatting, graphics, and layout stay 100% intact.
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--muted)]">
+                        {(bookFile.size / (1024 * 1024)).toFixed(2)} MB • PDF
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => bookInputRef.current?.click()}
+                        className="text-xs font-bold text-[var(--primary)] hover:underline ml-1"
+                      >
+                        Change File
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Extracted PDF Metadata Banner */}
+                  {parsedPreview && (
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[var(--foreground)]">
+                              PDF Metadata Auto-Fetched
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30">
+                              ✓ Verified from Manuscript
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                            Detected <strong className="text-amber-700 dark:text-amber-300 font-bold">{formData.pages} total pages</strong>
+                            {formData.author ? <> • Author: <strong className="text-[var(--foreground)]">{formData.author}</strong></> : null}
+                            {formData.publicationDate ? <> • Date: <strong className="text-[var(--foreground)]">{formData.publicationDate}</strong></> : null}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-xs font-bold text-amber-700 dark:text-amber-300 shadow-2xs">
+                          📄 {formData.pages} Pages
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metadata Quick Verification */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-[var(--foreground)] block mb-1">
+                        Book Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => handleTitleChange(e.target.value)}
+                        placeholder="Book Title"
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[var(--background)] border border-[var(--border)] outline-none text-[var(--foreground)] focus:border-[var(--primary)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[var(--foreground)] block mb-1">
+                        Author
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.author}
+                        onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                        placeholder="Author Name"
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[var(--background)] border border-[var(--border)] outline-none text-[var(--foreground)] focus:border-[var(--primary)]"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-[var(--foreground)]">
+                          Page Count
+                        </label>
+                        {parsedPreview && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                            <CheckCircle2 className="w-3 h-3" /> Auto-fetched
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.pages}
+                        onChange={(e) => setFormData({ ...formData, pages: Number(e.target.value) })}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[var(--background)] border border-[var(--border)] outline-none text-[var(--foreground)] focus:border-[var(--primary)] font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[var(--foreground)] block mb-1">
+                        Language
+                      </label>
+                      <select
+                        value={formData.language}
+                        onChange={(e) => setFormData({ ...formData, language: e.target.value as any })}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[var(--background)] border border-[var(--border)] outline-none text-[var(--foreground)] font-semibold focus:border-[var(--primary)]"
+                      >
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi (हिंदी)</option>
+                        <option value="Other">Other / Bilingual</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Live Embedded PDF Preview */}
+                  {directPdfPreviewUrl && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-[var(--foreground)]">
+                        <span>Live Document Preview (Exact Manuscript Layout)</span>
+                        <a
+                          href={directPdfPreviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-[var(--primary)] hover:underline flex items-center gap-1 font-bold"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open Full Window</span>
+                        </a>
+                      </div>
+                      <div className="w-full h-80 rounded-2xl border border-[var(--border)] overflow-hidden bg-neutral-900 shadow-inner">
+                        <object
+                          data={`${directPdfPreviewUrl}#toolbar=1&navpanes=0`}
+                          type="application/pdf"
+                          className="w-full h-full border-0"
+                        >
+                          <iframe
+                            src={`${directPdfPreviewUrl}#toolbar=1&navpanes=0`}
+                            className="w-full h-full border-0"
+                            title="Direct PDF Preview"
+                          />
+                        </object>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Optional text extraction trigger */}
+                  <div className="p-3.5 rounded-2xl bg-blue-500/5 border border-blue-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="text-[11px] text-blue-700">
+                      <strong>Preserving Original PDF:</strong> Readers will view this file directly in the built-in PDF reader.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleExtractPdfText}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 text-[11px] font-bold transition-colors shrink-0"
+                    >
+                      Extract plain text anyway (Optional)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Verified Content Preview & Immediate Correction Panel (Only if extracted pages exist) */}
+              {parsedPreview && !parsingBook && extractedPages.length > 0 && (
                 <div className="p-6 rounded-3xl bg-[var(--bg-subtle)]/80 border border-[var(--border)] shadow-xs space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2.5">
@@ -1126,8 +1419,8 @@ export default function NewBookWizard() {
                     </div>
                   )}
 
-                  {/* Fallback Single Excerpt Editor (if extractedPages is empty) */}
-                  {extractedPages.length === 0 && (
+                  {/* Fallback Single Excerpt Editor (if extractedPages is empty and NOT PDF) */}
+                  {extractedPages.length === 0 && formData.format !== "PDF" && (
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="text-[11px] font-bold text-[var(--foreground)] block">
@@ -1221,14 +1514,21 @@ export default function NewBookWizard() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[var(--foreground)] block mb-1.5">
-                    Estimated Pages
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-[var(--foreground)]">
+                      Total Pages
+                    </label>
+                    {parsedPreview && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Auto-detected from manuscript
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
                     value={formData.pages}
                     onChange={(e) => setFormData({ ...formData, pages: parseInt(e.target.value) || 100 })}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] font-semibold"
                   />
                 </div>
 
@@ -1409,9 +1709,13 @@ export default function NewBookWizard() {
                           Exact PDF File: <strong>{bookFile.name}</strong> ({(bookFile.size / (1024 * 1024)).toFixed(2)} MB)
                         </span>
                       </div>
-                      {extractedPages.length > 0 && (
+                      {extractedPages.length > 0 ? (
                         <span className="font-bold text-emerald-800 bg-emerald-200/70 px-2.5 py-0.5 rounded-lg text-[11px]">
                           {extractedPages.length} Sequential Pages Ready
+                        </span>
+                      ) : (
+                        <span className="font-bold text-emerald-800 bg-emerald-200/70 px-2.5 py-0.5 rounded-lg text-[11px]">
+                          Direct PDF Reader (Preserved 100% As-Is)
                         </span>
                       )}
                     </div>
