@@ -44,19 +44,20 @@ export function paginateBook(book: Book): PageData[] {
         continue;
       }
 
-      // Group paragraphs into comfortable pages (~110-140 words per page)
-      // Page 1 of each chapter has the title block, so use ~90-110 words
+      // Group paragraphs into comfortable pages (~48-62 words per page)
+      // Page 1 of each chapter has the chapter title block, so use ~46-50 words
+      // This guarantees zero vertical clipping or scrollbar on mobile portrait screens
       let currentBatch: string[] = [];
       let currentWordCount = 0;
       const isChapterStart = () => currentBatch.length === 0 && (pages.length === 0 || pages[pages.length - 1]?.chapterTitle !== ch.title);
-      const targetMaxWords = () => (isChapterStart() ? 100 : 135);
+      const targetMaxWords = () => (isChapterStart() ? 48 : 62);
 
       for (const p of rawParas) {
-        const words = p.split(/\s+/).length;
+        const words = p.split(/\s+/).filter(Boolean).length;
         const maxLimit = targetMaxWords();
 
-        // If a single paragraph is too long (> 140 words), split into sentence chunks
-        if (words > 140) {
+        // If a single paragraph is too long (> maxLimit), split into sentence chunks
+        if (words > maxLimit) {
           if (currentBatch.length > 0) {
             pages.push({
               pageNumber: pageCounter++,
@@ -72,8 +73,8 @@ export function paginateBook(book: Book): PageData[] {
           let subCount = 0;
 
           for (const s of sentences) {
-            const sWords = s.split(/\s+/).length;
-            if (subCount + sWords > 120 && subBatch.length > 0) {
+            const sWords = s.split(/\s+/).filter(Boolean).length;
+            if (subCount + sWords > maxLimit && subBatch.length > 0) {
               pages.push({
                 pageNumber: pageCounter++,
                 chapterTitle: ch.title,
@@ -114,15 +115,24 @@ export function paginateBook(book: Book): PageData[] {
     }
   }
 
-  // Fallback if no structured chapters
+  // Fallback if no structured chapters exist:
+  // Dynamically paginate default content instead of dumping everything onto page 1
   if (pages.length === 0) {
-    const defaultText = book.sampleContent || book.description || "";
-    const paras = defaultText.split(/\r?\n\s*\r?\n/).filter(Boolean);
-    pages.push({
-      pageNumber: 1,
-      chapterTitle: book.title,
-      paragraphs: paras.length > 0 ? paras : [defaultText],
-    });
+    const defaultText =
+      book.sampleContent ||
+      book.description ||
+      "In the quiet digital sanctuary of READORA, every thought, idea, and dialogue is crafted for deep contemplation.";
+
+    const fallbackParas = defaultText.split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean);
+    const virtualChapters = [
+      {
+        id: "ch-1",
+        title: book.title || "Chapter 1",
+        content: fallbackParas.join("\n\n"),
+      },
+    ];
+
+    return paginateBook({ ...book, chapters: virtualChapters as any });
   }
 
   return pages;

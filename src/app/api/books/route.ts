@@ -101,7 +101,10 @@ export async function POST(request: Request) {
         discount: Number(body.discount) || 0,
         currency: body.currency || "INR",
         previewType: body.previewType || "PAGES",
-        previewPages: Number(body.previewPages) || 10,
+        previewPages:
+          (Number(body.pages) || 200) > 1
+            ? Math.max(1, Math.min(Number(body.previewPages) || 10, (Number(body.pages) || 200) - 1))
+            : 1,
         previewPercentage: Number(body.previewPercentage) || 15,
         previewChapters: Number(body.previewChapters) || 2,
         watermarkEnabled: body.watermarkEnabled !== undefined ? Boolean(body.watermarkEnabled) : true,

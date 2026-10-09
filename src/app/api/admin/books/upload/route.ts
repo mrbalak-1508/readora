@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         validation.file.fileName.toLowerCase().endsWith(".pdf")
       ) {
         try {
-          const meta = await extractPdfMetadata(validation.file.buffer, validation.file.fileName);
+          const meta = await extractPdfMetadata(Buffer.from(validation.file.buffer), validation.file.fileName);
           if (meta.pageCount && meta.pageCount > 0) {
             detectedPdfPages = meta.pageCount;
           }
@@ -172,6 +172,22 @@ export async function POST(request: NextRequest) {
         ? 200
         : pages;
 
+    // Free Preview Limit (Pages) must be strictly less than the total pages
+    const requestedPreviewPages = parseInt((formData.get("previewPages") as string) || "10", 10);
+    if (!isNaN(requestedPreviewPages) && calculatedPages > 1 && requestedPreviewPages >= calculatedPages) {
+      return NextResponse.json(
+        {
+          error: `Free Preview Limit (${requestedPreviewPages} pages) must be less than the total pages (${calculatedPages} pages). Please set it to ${calculatedPages - 1} or fewer pages.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const safePreviewPages =
+      calculatedPages > 1
+        ? Math.max(1, Math.min(isNaN(requestedPreviewPages) ? 10 : requestedPreviewPages, calculatedPages - 1))
+        : 1;
+
     const resolvedPublicationDate =
       detectedPdfDate && (!publicationDate || publicationDate === new Date().toISOString().split("T")[0])
         ? detectedPdfDate
@@ -208,7 +224,7 @@ export async function POST(request: NextRequest) {
         discount: isNaN(discount) ? 0 : discount,
         currency: "INR",
         previewType,
-        previewPages: isNaN(previewPages) ? 10 : previewPages,
+        previewPages: safePreviewPages,
         previewPercentage: isNaN(previewPercentage) ? 15 : previewPercentage,
         previewChapters: isNaN(previewChapters) ? 2 : previewChapters,
         watermarkEnabled,

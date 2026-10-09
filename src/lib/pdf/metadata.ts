@@ -148,16 +148,20 @@ export async function extractPdfMetadata(
   const headerSlice = buf.subarray(0, 50000).toString("binary");
   const isEncrypted = headerSlice.includes("/Encrypt");
 
+  let doc: any = null;
+  let loadingTask: any = null;
   try {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const uint8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+    // Allocate an independent ArrayBuffer copy so PDF.js worker/stream does not detach the caller's ArrayBuffer
+    const uint8 = new Uint8Array(buf.byteLength);
+    uint8.set(buf);
 
-    const loadingTask = pdfjs.getDocument({
+    loadingTask = pdfjs.getDocument({
       data: uint8,
       useSystemFonts: true,
     });
 
-    const doc = await loadingTask.promise;
+    doc = await loadingTask.promise;
     const pageCount = doc.numPages || 1;
 
     let info: any = {};
@@ -205,5 +209,16 @@ export async function extractPdfMetadata(
   } catch (err) {
     console.warn("PDF.js metadata extraction encountered error, using fallback buffer parser:", err);
     return extractMetadataFromRawBuffer(buf, fileName);
+  } finally {
+    if (doc) {
+      try {
+        await doc.destroy();
+      } catch {}
+    }
+    if (loadingTask) {
+      try {
+        await loadingTask.destroy();
+      } catch {}
+    }
   }
 }

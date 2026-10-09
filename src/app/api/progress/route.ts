@@ -88,13 +88,23 @@ export async function POST(request: Request) {
     });
 
     if (!book) {
-      return NextResponse.json({ error: "Book not found" }, { status: 404 });
+      // Mock/demo book not in DB: acknowledge cleanly so client localStorage handles it
+      return NextResponse.json({
+        bookId: rawBookId,
+        currentPage: Number(body.currentPage) || 1,
+        savedLocally: true,
+      });
     }
 
     // 2. Resolve authenticated user
     const userId = await resolveValidUser(body.userId);
     if (!userId) {
-      return NextResponse.json({ error: "Please sign in to save your reading progress." }, { status: 401 });
+      // Guest reader: progress is tracked in client localStorage without failing
+      return NextResponse.json({
+        bookId: rawBookId,
+        currentPage: Number(body.currentPage) || 1,
+        guest: true,
+      });
     }
 
     const currentPage = Number(body.currentPage) || 1;
@@ -102,36 +112,45 @@ export async function POST(request: Request) {
     const percentage = Number(body.percentage) || Math.min(100, Math.round((currentPage / totalPages) * 100));
     const completed = Boolean(body.completed) || percentage >= 100;
 
-    const progress = await prisma.readingProgress.upsert({
-      where: {
-        userId_bookId: { userId, bookId: book.id },
-      },
-      update: {
-        currentPage,
-        totalPages,
-        currentChapter: body.currentChapter || "Chapter 1",
-        percentage,
-        timeSpentSeconds: Number(body.timeSpentSeconds) || 0,
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
-      create: {
-        userId,
-        bookId: book.id,
-        bookTitle: book.title,
-        bookCover: book.coverPath,
-        author: book.author,
-        currentPage,
-        totalPages,
-        currentChapter: body.currentChapter || "Chapter 1",
-        percentage,
-        timeSpentSeconds: Number(body.timeSpentSeconds) || 0,
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
-    });
+    try {
+      const progress = await prisma.readingProgress.upsert({
+        where: {
+          userId_bookId: { userId, bookId: book.id },
+        },
+        update: {
+          currentPage,
+          totalPages,
+          currentChapter: body.currentChapter || "Chapter 1",
+          percentage,
+          timeSpentSeconds: Number(body.timeSpentSeconds) || 0,
+          completed,
+          completedAt: completed ? new Date() : null,
+        },
+        create: {
+          userId,
+          bookId: book.id,
+          bookTitle: book.title,
+          bookCover: book.coverPath,
+          author: book.author,
+          currentPage,
+          totalPages,
+          currentChapter: body.currentChapter || "Chapter 1",
+          percentage,
+          timeSpentSeconds: Number(body.timeSpentSeconds) || 0,
+          completed,
+          completedAt: completed ? new Date() : null,
+        },
+      });
 
-    return NextResponse.json(progress);
+      return NextResponse.json(progress);
+    } catch (dbErr: any) {
+      console.warn("Could not save progress to database, falling back to local session:", dbErr?.message);
+      return NextResponse.json({
+        bookId: rawBookId,
+        currentPage,
+        savedLocally: true,
+      });
+    }
   } catch (error: any) {
     console.error("Progress POST error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

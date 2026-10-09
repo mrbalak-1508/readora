@@ -252,9 +252,11 @@ export const PdfPage = React.memo(function PdfPage({
       {/* REAL HIGH-DPI PDF PAGE CANVAS */}
       <canvas
         ref={canvasRef}
-        className="rounded-xs transition-opacity duration-300 block shadow-xs"
+        className="pdf-page-canvas rounded-xs transition-opacity duration-300 block shadow-xs m-auto"
         style={{
-          width: cssSize ? `${cssSize.width}px` : "100%",
+          position: "relative",
+          margin: "auto",
+          width: cssSize ? `${cssSize.width}px` : "auto",
           height: cssSize ? `${cssSize.height}px` : "auto",
           maxWidth: "100%",
           maxHeight: "100%",

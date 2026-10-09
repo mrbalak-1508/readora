@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Book, Bookmark, Highlight, ReadingProgress } from "@/lib/types";
 import { store } from "@/lib/data/storage";
-import { soundManager } from "@/lib/sound";
+import { soundManager, SoundProfile } from "@/lib/sound";
 
 export type ReaderTheme = "paper" | "warm" | "sepia" | "dark" | "midnight";
 export type ReaderFont = "serif" | "sans" | "readable" | "mono";
@@ -31,6 +31,8 @@ interface ReaderContextType {
   setSoundEnabled: (enabled: boolean) => void;
   soundVolume: number;
   setSoundVolume: (volume: number) => void;
+  soundProfile: SoundProfile;
+  setSoundProfile: (profile: SoundProfile) => void;
   animation3d: boolean;
   setAnimation3d: (enabled: boolean) => void;
   animationSpeed: AnimationSpeed;
@@ -76,6 +78,7 @@ export function ReaderProvider({
   const [pageMode, setPageMode] = useState<"scroll" | "paged">("paged");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(false);
   const [soundVolume, setSoundVolumeState] = useState<number>(0.8);
+  const [soundProfile, setSoundProfileState] = useState<SoundProfile>("parchment");
   const [animation3d, setAnimation3dState] = useState<boolean>(true);
   const [animationSpeed, setAnimationSpeedState] = useState<AnimationSpeed>("normal");
   const isInitiallyFree =
@@ -98,6 +101,7 @@ export function ReaderProvider({
   useEffect(() => {
     setSoundEnabledState(soundManager.isEnabled());
     setSoundVolumeState(soundManager.getVolume());
+    setSoundProfileState(soundManager.getSoundProfile());
 
     const savedTheme = localStorage.getItem("readora_reader_theme") as ReaderTheme;
     if (savedTheme) setTheme(savedTheme);
@@ -224,6 +228,11 @@ export function ReaderProvider({
   const handleSetSoundVolume = (volume: number) => {
     setSoundVolumeState(volume);
     soundManager.setVolume(volume);
+  };
+
+  const handleSetSoundProfile = (profile: SoundProfile) => {
+    setSoundProfileState(profile);
+    soundManager.setSoundProfile(profile, true);
   };
 
   const handleSetAnimation3d = (enabled: boolean) => {
@@ -403,6 +412,8 @@ export function ReaderProvider({
         setSoundEnabled: handleSetSoundEnabled,
         soundVolume,
         setSoundVolume: handleSetSoundVolume,
+        soundProfile,
+        setSoundProfile: handleSetSoundProfile,
         animation3d,
         setAnimation3d: handleSetAnimation3d,
         animationSpeed,

@@ -5,7 +5,6 @@ import HTMLFlipBook, { IFlipBookMethods } from "react-pageflip";
 import { BookPage } from "./BookPage";
 import { useReaderDimensions } from "@/hooks/reader/useReaderDimensions";
 import { soundManager } from "@/lib/sound";
-
 import { PageData } from "@/lib/pagination";
 
 export interface BookReaderHandle {
@@ -69,10 +68,79 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
 ) {
   const flipBookRef = useRef<IFlipBookMethods | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Dynamic responsive dimensions keeping PDF aspect ratio and spread mode
   const { pageWidth, pageHeight, isMobile } = useReaderDimensions(0.707, spreadMode);
   const isPortraitMode = isMobile || spreadMode === "single";
+
+  // Prevent duplicate page turns from concurrent calls
+  const isFlippingRef = useRef(false);
+
+  // Pan / Drag State when zoomed in
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Reset pan when zoom returns to 1.0 or book changes
+  useEffect(() => {
+    if (zoom <= 1.0) {
+      setPan({ x: 0, y: 0 });
+    }
+  }, [zoom, bookId]);
+
+  // Max pan constraints based on current zoom level
+  const totalDeckWidth = isPortraitMode ? pageWidth : pageWidth * 2;
+  const maxPanX = Math.max(0, (totalDeckWidth * zoom - totalDeckWidth) / 2 + 80);
+  const maxPanY = Math.max(0, (pageHeight * zoom - pageHeight) / 2 + 80);
+
+  // Mouse pan event handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom <= 1.0) return;
+    if ((e.target as HTMLElement).closest("button, a, input, [role='button']")) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    panStartRef.current = { ...pan };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || zoom <= 1.0) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    const newX = Math.max(-maxPanX, Math.min(maxPanX, panStartRef.current.x + dx));
+    const newY = Math.max(-maxPanY, Math.min(maxPanY, panStartRef.current.y + dy));
+    setPan({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  // Touch pan event handlers (when zoomed in, pan instead of flip)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (zoom <= 1.0 || e.touches.length !== 1) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    panStartRef.current = { ...pan };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current || zoom <= 1.0 || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - dragStartRef.current.x;
+    const dy = e.touches[0].clientY - dragStartRef.current.y;
+    const newX = Math.max(-maxPanX, Math.min(maxPanX, panStartRef.current.x + dx));
+    const newY = Math.max(-maxPanY, Math.min(maxPanY, panStartRef.current.y + dy));
+    setPan({ x: newX, y: newY });
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+  };
 
   // Expose imperative methods to parent toolbar and navigation
   useImperativeHandle(
@@ -80,24 +148,60 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
     () => ({
       flipNext: () => {
         try {
-          flipBookRef.current?.pageFlip()?.flipNext();
-        } catch {}
+          const pf = flipBookRef.current?.pageFlip();
+          if (pf) {
+            pf.flipNext();
+            return;
+          }
+        } catch (err) {
+          console.warn("flipNext error, using fallback:", err);
+        }
+        // Fallback if flipbook instance is unavailable
+        const step = isPortraitMode ? 1 : 2;
+        const next = Math.min(totalPages, currentPage + step);
+        if (next !== currentPage) {
+          if (soundEnabled) soundManager.playPageTurn();
+          setCurrentPage(next);
+          onPageChange?.(next);
+        }
       },
       flipPrev: () => {
         try {
-          flipBookRef.current?.pageFlip()?.flipPrev();
-        } catch {}
+          const pf = flipBookRef.current?.pageFlip();
+          if (pf) {
+            pf.flipPrev();
+            return;
+          }
+        } catch (err) {
+          console.warn("flipPrev error, using fallback:", err);
+        }
+        // Fallback if flipbook instance is unavailable
+        const step = isPortraitMode ? 1 : 2;
+        const prev = Math.max(1, currentPage - step);
+        if (prev !== currentPage) {
+          if (soundEnabled) soundManager.playPageTurn();
+          setCurrentPage(prev);
+          onPageChange?.(prev);
+        }
       },
       turnToPage: (targetPage: number) => {
         try {
           const zeroIndex = Math.max(0, Math.min(totalPages - 1, targetPage - 1));
-          flipBookRef.current?.pageFlip()?.turnToPage(zeroIndex);
-          setCurrentPage(targetPage);
-        } catch {}
+          const pf = flipBookRef.current?.pageFlip();
+          if (pf) {
+            pf.turnToPage(zeroIndex);
+            return;
+          }
+        } catch (err) {
+          console.warn("turnToPage error, using fallback:", err);
+        }
+        if (soundEnabled) soundManager.playPageTurn();
+        setCurrentPage(targetPage);
+        onPageChange?.(targetPage);
       },
       getCurrentPage: () => currentPage,
     }),
-    [currentPage, totalPages]
+    [currentPage, totalPages, isPortraitMode, soundEnabled, onPageChange]
   );
 
   // Sync external page changes (from TOC, Bookmarks, Search, Keyboard)
@@ -116,6 +220,7 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
 
   const handleFlip = useCallback(
     (e: { data: number }) => {
+      isFlippingRef.current = false;
       const newPage = e.data + 1;
       setCurrentPage(newPage);
 
@@ -130,20 +235,33 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
     [soundEnabled, onPageChange]
   );
 
-  // Sliding active window for pre-rendering nearby pages without blank delays
-  const activeRadius = totalPages <= 32 ? totalPages : 8;
   const pageNumbers = Array.from({ length: Math.max(1, totalPages) }, (_, i) => i + 1);
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center relative overflow-hidden"
-      style={{
-        transform: zoom > 1 ? `scale(${zoom})` : undefined,
-        transformOrigin: "center center",
-        transition: "transform 0.2s ease-out",
-      }}
+      className={`w-full h-full flex items-center justify-center relative overflow-hidden ${
+        zoom > 1.0 ? "cursor-grab active:cursor-grabbing select-none" : ""
+      }`}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      <div className="relative flex items-center justify-center">
+      {/* Scaled & Pannable Book Container */}
+      <div
+        suppressHydrationWarning
+        className="relative flex items-center justify-center will-change-transform"
+        style={{
+          width: `${totalDeckWidth}px`,
+          height: `${pageHeight}px`,
+          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+          transformOrigin: "center center",
+          transition: isDraggingRef.current ? "none" : "transform 0.15s ease-out",
+        }}
+      >
         {/* Subtle center spine shadow in two-page desktop spread */}
         {!isPortraitMode && (
           <div
@@ -153,39 +271,51 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
               left: "50%",
               top: 0,
               bottom: 0,
-              width: "3px",
+              width: "4px",
               transform: "translateX(-50%)",
-              boxShadow: "0 0 16px 2px rgba(0, 0, 0, 0.4)",
+              boxShadow: "0 0 18px 3px rgba(0, 0, 0, 0.45)",
             }}
           />
         )}
 
-        {pageNumbers.length > 0 && (
+        {/* Outer Edge Thickness Depth Effect */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-sm shadow-2xl -z-10"
+          style={{
+            boxShadow:
+              theme === "dark" || theme === "midnight"
+                ? "0 20px 45px -10px rgba(0,0,0,0.8), 0 0 15px rgba(0,0,0,0.6)"
+                : "0 22px 48px -12px rgba(45,30,20,0.35), 0 4px 12px rgba(0,0,0,0.15)",
+          }}
+        />
+
+        {isMounted && pageNumbers.length > 0 ? (
           <HTMLFlipBook
             key={`flipbook-${isPortraitMode}-${hasFullAccess ? "unlocked" : "locked"}-${theme}`}
             ref={flipBookRef}
             width={pageWidth}
             height={pageHeight}
             size="fixed"
-            minWidth={240}
+            minWidth={200}
             maxWidth={800}
-            minHeight={340}
+            minHeight={280}
             maxHeight={1100}
             showCover={false}
             mobileScrollSupport={false}
-            useMouseEvents={true}
+            useMouseEvents={zoom <= 1.0}
+            disableFlipByClick={false}
             drawShadow={true}
-            flippingTime={600}
+            flippingTime={650}
             usePortrait={isPortraitMode}
             startPage={Math.max(0, initialPage - 1)}
             onFlip={handleFlip}
             renderOnlyPageLengthChange={false}
             className="book-canvas-deck shadow-2xl rounded-sm"
+            style={{ margin: "0 auto", display: "block" }}
           >
             {pageNumbers.map((pageNum) => {
               const isCover = pageNum === 1;
               const isBackCover = pageNum === totalPages && totalPages > 1;
-              const isActiveWindow = Math.abs(pageNum - currentPage) <= activeRadius;
 
               return (
                 <BookPage
@@ -211,12 +341,16 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
                   fontSize={fontSize}
                   lineHeight={lineHeight}
                   textAlign={textAlign}
-                  isActiveWindow={isActiveWindow}
                   onUnlockRequest={onUnlockRequest}
                 />
               );
             })}
           </HTMLFlipBook>
+        ) : (
+          <div
+            className="book-canvas-deck shadow-2xl rounded-sm bg-black/5 dark:bg-white/5 animate-pulse"
+            style={{ width: `${totalDeckWidth}px`, height: `${pageHeight}px` }}
+          />
         )}
       </div>
     </div>

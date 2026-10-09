@@ -119,6 +119,8 @@
   
   --color-accent-light: var(--accent-light);
   --color-accent-border: var(--accent-border);
+
+  --breakpoint-xs: 480px;
 }
 
 /* Custom scrollbar */
@@ -135,6 +137,19 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-subtle);
+}
+
+/* Hide scrollbar cleanly */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.book-leaf-spine-shadow {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.02) 4%, transparent 12%);
 }
 
 /* Smooth book cover 3D sheen */
@@ -362,6 +377,18 @@
 .book-canvas-deck {
   perspective: 2400px;
   transform-style: preserve-3d;
+}
+
+/* Override page-flip library's aggressive .stf__parent canvas rule for our PDF canvas */
+.stf__parent canvas.pdf-page-canvas,
+canvas.pdf-page-canvas {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  margin: auto !important;
+  display: block !important;
 }
 
 /* Reader theme classes */

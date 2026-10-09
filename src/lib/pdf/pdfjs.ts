@@ -30,8 +30,10 @@ export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uin
 
     // If binary data provided directly
     if (pdfUrlOrData instanceof Uint8Array) {
+      const dataCopy = new Uint8Array(pdfUrlOrData.byteLength);
+      dataCopy.set(pdfUrlOrData);
       const task = pdfjs.getDocument({
-        data: pdfUrlOrData,
+        data: dataCopy,
         cMapUrl,
         cMapPacked: true,
         standardFontDataUrl,

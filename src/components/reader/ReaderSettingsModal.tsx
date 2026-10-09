@@ -15,6 +15,7 @@ import {
   Bookmark,
   Search,
 } from "lucide-react";
+import { SOUND_PROFILES, soundManager } from "@/lib/sound";
 
 interface ReaderSettingsModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export function ReaderSettingsModal({
     setSoundEnabled,
     soundVolume,
     setSoundVolume,
+    soundProfile,
+    setSoundProfile,
     animation3d,
     setAnimation3d,
     animationSpeed,
@@ -220,20 +223,52 @@ export function ReaderSettingsModal({
             </div>
 
             {soundEnabled && (
-              <div className="pt-2">
-                <div className="flex justify-between text-[11px] text-[var(--muted)] mb-1">
-                  <span>Sound Volume</span>
-                  <span className="font-mono">{Math.round(soundVolume * 100)}%</span>
+              <div className="pt-2 space-y-3">
+                <div>
+                  <div className="flex justify-between text-[11px] text-[var(--muted)] mb-1">
+                    <span>Sound Volume</span>
+                    <span className="font-mono">{Math.round(soundVolume * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={soundVolume}
+                    onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                    className="w-full accent-[var(--secondary)] cursor-pointer h-1.5 rounded-full"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={soundVolume}
-                  onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
-                  className="w-full accent-[var(--secondary)] cursor-pointer h-1.5 rounded-full"
-                />
+
+                {/* SFX Timbre / Sound Profile Selection */}
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--muted)] block mb-1.5">
+                    Page Turn SFX Timbre
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {SOUND_PROFILES.map((p) => {
+                      const isCurrent = (soundProfile || "parchment") === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setSoundProfile(p.id);
+                            soundManager.playPageTurn(p.id);
+                          }}
+                          className={`py-1.5 px-2 rounded-xl text-[11px] font-medium border text-center transition-all cursor-pointer truncate ${
+                            isCurrent
+                              ? "bg-[var(--secondary)] text-white border-[var(--secondary)] font-bold shadow-2xs"
+                              : "bg-[var(--card)] text-[var(--muted)] border-[var(--border)] hover:bg-[var(--bg-subtle)]"
+                          }`}
+                          title={p.description}
+                        >
+                          {p.name.replace(/^(Classic |Crisp |Vintage |Digital |Whisper |Custom )/, "")}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
           </div>

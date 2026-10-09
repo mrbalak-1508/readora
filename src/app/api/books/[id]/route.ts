@@ -59,6 +59,19 @@ export async function PUT(
 
     const body = await request.json();
 
+    const existingBook = await prisma.book.findUnique({ where: { id } });
+    if (!existingBook) {
+      return NextResponse.json({ error: "Book not found" }, { status: 404 });
+    }
+
+    const targetPages = body.pages !== undefined ? Number(body.pages) : existingBook.pages;
+    if (body.previewPages !== undefined && targetPages > 1 && Number(body.previewPages) >= targetPages) {
+      return NextResponse.json(
+        { error: `Free Preview Limit (${body.previewPages} pages) must be less than total pages (${targetPages} pages).` },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.book.update({
       where: { id },
       data: {

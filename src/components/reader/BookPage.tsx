@@ -83,11 +83,19 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
 
   const isLocked = !hasFullAccess && previewLimit ? pageNumber > previewLimit : false;
 
+  // Responsive typography: On compact/mobile screens (< 420px), slightly adjust
+  // font size and line height so text never clips or overflows the physical page leaf.
+  const isCompact = width ? width < 420 : true;
+  const effectiveFontSize = isCompact ? Math.max(12.5, Math.min(fontSize, 15)) : fontSize;
+  const effectiveLineHeight = isCompact ? Math.min(lineHeight, 1.62) : lineHeight;
+
   return (
     <div
       ref={ref}
       data-density={isCover || isBackCover ? "hard" : "soft"}
-      className={`page book-page-leaf flex flex-col justify-between overflow-hidden relative shadow-sm ${themeClasses} ${
+      className={`page book-page-leaf flex flex-col ${
+        isPdfBook ? "items-center justify-center" : "justify-between"
+      } overflow-hidden relative shadow-sm ${themeClasses} ${
         isCover ? "book-page-cover" : isBackCover ? "book-page-back-cover" : ""
       } ${className}`}
       style={{
@@ -100,7 +108,7 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
 
       {/* RENDER CONTENT: VISUAL PDF CANVAS OR EDITORIAL TEXT FORMAT */}
       {isPdfBook ? (
-        <div className="flex-1 w-full h-full flex items-center justify-center relative overflow-hidden z-0">
+        <div className="w-full h-full flex items-center justify-center relative overflow-hidden z-0">
           <PdfPage
             bookId={bookId}
             pageNumber={pageNumber}
@@ -118,26 +126,26 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
           />
         </div>
       ) : (
-        <div className="flex-1 w-full h-full p-3 sm:p-5 md:p-6 flex flex-col justify-between relative overflow-hidden z-0 select-text">
+        <div className="flex-1 w-full h-full p-2.5 xs:p-3.5 sm:p-5 md:p-6 flex flex-col justify-between relative overflow-hidden z-0 select-text">
           {/* LOCKED PREVIEW STATE */}
           {isLocked ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-              <div className="w-12 h-12 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] flex items-center justify-center mb-3 shadow-xs">
-                <Lock className="w-6 h-6" />
+            <div className="flex-1 flex flex-col items-center justify-center p-3 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] flex items-center justify-center mb-2 sm:mb-3 shadow-xs">
+                <Lock className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--coral)] bg-[var(--coral)]/10 px-3 py-1 rounded-full mb-2">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[var(--coral)] bg-[var(--coral)]/10 px-2.5 py-0.5 sm:py-1 rounded-full mb-1.5 sm:mb-2">
                 Preview Concluded ({previewLimit} Pages)
               </span>
-              <h4 className="font-editorial text-lg font-bold text-[var(--foreground)] mb-1.5">
+              <h4 className="font-editorial text-base sm:text-lg font-bold text-[var(--foreground)] mb-1">
                 Page {pageNumber} is Locked
               </h4>
-              <p className="text-xs text-[var(--muted)] max-w-xs mb-4 leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-[var(--muted)] max-w-xs mb-3 sm:mb-4 leading-relaxed">
                 Unlock the complete edition of &ldquo;{bookTitle}&rdquo; to access all {totalPages} pages.
               </p>
               {onUnlockRequest && (
                 <button
                   onClick={onUnlockRequest}
-                  className="px-5 py-2 rounded-full bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                   <span>Unlock Full Book {price ? `• ₹${price}` : ""}</span>
@@ -147,30 +155,30 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
           ) : (
             <>
               {/* Running Header */}
-              <div className="flex items-center justify-between pb-1.5 sm:pb-2 border-b border-black/8 dark:border-white/8 text-[10px] sm:text-[11px] font-mono opacity-50 uppercase tracking-widest shrink-0 select-none">
-                <span className="truncate max-w-[60%]">{bookTitle}</span>
-                <span className="truncate max-w-[40%] text-right">{pageData?.chapterTitle || `Page ${pageNumber}`}</span>
+              <div className="flex items-center justify-between pb-1 sm:pb-2 border-b border-black/8 dark:border-white/8 text-[9px] sm:text-[11px] font-mono opacity-50 uppercase tracking-widest shrink-0 select-none">
+                <span className="truncate max-w-[55%]">{bookTitle}</span>
+                <span className="truncate max-w-[45%] text-right">{pageData?.chapterTitle || `Page ${pageNumber}`}</span>
               </div>
 
               {/* Editorial Page Content */}
-              <div className="my-1.5 sm:my-2 flex-1 min-h-0 overflow-y-auto pr-0.5 scrollbar-thin">
+              <div className="my-1 sm:my-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-0.5 scrollbar-none select-text break-words">
                 {pageNumber === 1 && (
-                  <div className="mb-2.5 sm:mb-3 text-center">
-                    <span className="text-[9px] sm:text-[10px] tracking-widest font-mono uppercase opacity-50 block mb-0.5">
+                  <div className="mb-1.5 sm:mb-3 text-center">
+                    <span className="text-[8.5px] sm:text-[10px] tracking-widest font-mono uppercase opacity-50 block mb-0.5">
                       Chapter One
                     </span>
-                    <h2 className="font-editorial text-lg sm:text-xl font-bold tracking-tight">
+                    <h2 className="font-editorial text-base sm:text-xl font-bold tracking-tight">
                       {pageData?.chapterTitle || bookTitle}
                     </h2>
-                    <div className="w-8 h-0.5 bg-[var(--primary)]/30 mx-auto mt-1.5" />
+                    <div className="w-6 sm:w-8 h-0.5 bg-[var(--primary)]/30 mx-auto mt-1 sm:mt-1.5" />
                   </div>
                 )}
 
                 <article
-                  className={`${fontClasses} leading-relaxed transition-all`}
+                  className={`${fontClasses} leading-relaxed transition-all break-words hyphens-auto`}
                   style={{
-                    fontSize: `${fontSize}px`,
-                    lineHeight: lineHeight,
+                    fontSize: `${effectiveFontSize}px`,
+                    lineHeight: effectiveLineHeight,
                     textAlign: textAlign,
                   }}
                 >
@@ -178,9 +186,9 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
                     pageData.paragraphs.map((para, idx) => (
                       <p
                         key={idx}
-                        className={`mb-4 indent-4 sm:indent-6 ${
+                        className={`mb-1.5 sm:mb-2.5 indent-3 sm:indent-6 break-words ${
                           pageNumber === 1 && idx === 0
-                            ? "first-letter:font-editorial first-letter:text-4xl sm:first-letter:text-5xl first-letter:float-left first-letter:mr-2.5 first-letter:font-bold first-letter:leading-none first-letter:text-[var(--primary)]"
+                            ? "first-letter:font-editorial first-letter:text-3xl sm:first-letter:text-5xl first-letter:float-left first-letter:mr-2 first-letter:font-bold first-letter:leading-none first-letter:text-[var(--primary)]"
                             : ""
                         }`}
                       >
@@ -193,27 +201,34 @@ export const BookPage = forwardRef<HTMLDivElement, BookPageProps>(function BookP
                 </article>
               </div>
 
-              {/* Running Footer */}
-              <div className="pt-2 sm:pt-2.5 border-t border-black/8 dark:border-white/8 flex items-center justify-between text-[10px] sm:text-[11px] font-mono opacity-40 shrink-0 select-none">
-                <span className="truncate">{author || "READORA Edition"}</span>
-                <span>{pageNumber}</span>
+              {/* Running Footer & Watermark */}
+              <div className="pt-1 sm:pt-2 border-t border-black/8 dark:border-white/8 flex flex-col gap-0.5 shrink-0 select-none">
+                <div className="flex items-center justify-between text-[9px] sm:text-[11px] font-mono opacity-45">
+                  <span className="truncate max-w-[65%]">{author || "READORA Edition"}</span>
+                  <span className="tabular-nums font-medium">{pageNumber}</span>
+                </div>
+                {watermark && !isLocked && (
+                  <div className="text-center opacity-25 text-[8px] sm:text-[9px] font-mono truncate pointer-events-none tracking-tight">
+                    {watermark}
+                  </div>
+                )}
               </div>
             </>
-          )}
-
-          {/* Watermark Overlay for Text Book */}
-          {watermark && !isLocked && (
-            <div className="absolute inset-x-2 bottom-2 pointer-events-none text-center opacity-20 text-[9px] font-mono select-none truncate">
-              {watermark}
-            </div>
           )}
         </div>
       )}
 
-      {/* DISCREET PAGE NUMBER FOIL BADGE (Bottom outer corner for PDF) */}
-      {isPdfBook && !isCover && !isBackCover && pageNumber > 0 && (
-        <div className="absolute bottom-2 right-3 pointer-events-none z-20 text-[9px] font-mono opacity-35 tracking-wider select-none">
-          {pageNumber}
+      {/* DISCREET PAGE NUMBER & WATERMARK (Bottom outer area for PDF) */}
+      {isPdfBook && !isCover && !isBackCover && (
+        <div className="absolute bottom-2 inset-x-3 pointer-events-none z-20 flex items-center justify-between text-[9px] font-mono select-none">
+          {watermark && !isLocked ? (
+            <span className="opacity-25 truncate max-w-[70%]">{watermark}</span>
+          ) : (
+            <span />
+          )}
+          {pageNumber > 0 && (
+            <span className="opacity-35 tracking-wider ml-auto tabular-nums">{pageNumber}</span>
+          )}
         </div>
       )}
     </div>

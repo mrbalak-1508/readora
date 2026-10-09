@@ -209,15 +209,23 @@ export default function NewBookWizard() {
         const resData = await res.json();
         if (res.ok && resData.success) {
           setParsedPreview(resData);
-          setFormData((prev) => ({
-            ...prev,
-            title: prev.title.trim() && prev.title !== derivedTitle ? prev.title : resData.title || prev.title,
-            slug: prev.title.trim() && prev.title !== derivedTitle ? prev.slug : generateSlug(resData.title || derivedTitle),
-            author: resData.author ? resData.author : prev.author,
-            pages: resData.pages && resData.pages > 0 ? resData.pages : prev.pages,
-            publicationDate: resData.publicationDate || prev.publicationDate,
-            language: resData.detectedLanguage || prev.language,
-          }));
+          setFormData((prev) => {
+            const detectedPages = resData.pages && resData.pages > 0 ? resData.pages : prev.pages;
+            const safePreview =
+              detectedPages > 1 && prev.previewPages >= detectedPages
+                ? Math.max(1, Math.min(prev.previewPages, detectedPages - 1))
+                : prev.previewPages;
+            return {
+              ...prev,
+              title: prev.title.trim() && prev.title !== derivedTitle ? prev.title : resData.title || prev.title,
+              slug: prev.title.trim() && prev.title !== derivedTitle ? prev.slug : generateSlug(resData.title || derivedTitle),
+              author: resData.author ? resData.author : prev.author,
+              pages: detectedPages,
+              previewPages: safePreview,
+              publicationDate: resData.publicationDate || prev.publicationDate,
+              language: resData.detectedLanguage || prev.language,
+            };
+          });
         }
       } catch (metaErr: any) {
         console.warn("Could not auto-fetch PDF metadata:", metaErr);
@@ -251,16 +259,24 @@ export default function NewBookWizard() {
       }
 
       // Auto-populate form data with verified extracted metadata & language
-      setFormData((prev) => ({
-        ...prev,
-        title: prev.title.trim() ? prev.title : resData.title,
-        slug: prev.title.trim() ? prev.slug : generateSlug(resData.title),
-        author: resData.author ? resData.author : (prev.author || "Curated Author"),
-        pages: resData.pages || resData.extractedPages?.length || prev.pages,
-        format: resData.format as any,
-        sampleContent: resData.sampleContent || prev.sampleContent,
-        language: (resData.detectedLanguage as any) || prev.language,
-      }));
+      setFormData((prev) => {
+        const detectedPages = resData.pages || resData.extractedPages?.length || prev.pages;
+        const safePreview =
+          detectedPages > 1 && prev.previewPages >= detectedPages
+            ? Math.max(1, Math.min(prev.previewPages, detectedPages - 1))
+            : prev.previewPages;
+        return {
+          ...prev,
+          title: prev.title.trim() ? prev.title : resData.title,
+          slug: prev.title.trim() ? prev.slug : generateSlug(resData.title),
+          author: resData.author ? resData.author : (prev.author || "Curated Author"),
+          pages: detectedPages,
+          previewPages: safePreview,
+          format: resData.format as any,
+          sampleContent: resData.sampleContent || prev.sampleContent,
+          language: (resData.detectedLanguage as any) || prev.language,
+        };
+      });
     } catch (err: any) {
       setParseError(err.message || "Failed to parse file contents. You can still proceed or try another file.");
     } finally {
@@ -458,6 +474,19 @@ export default function NewBookWizard() {
       setErrorMessage("Please enter a book title to continue.");
       return;
     }
+    if (currentStep === 4) {
+      if (formData.pages <= 0) {
+        setErrorMessage("Total pages must be at least 1.");
+        return;
+      }
+      if (formData.pages > 1 && formData.previewPages >= formData.pages) {
+        const maxLimit = formData.pages - 1;
+        const msg = `Free Preview Limit (${formData.previewPages} pages) must be less than the total pages (${formData.pages} pages). Max allowed: ${maxLimit}.`;
+        setErrorMessage(msg);
+        showErrorAlert("Invalid Preview Limit", msg);
+        return;
+      }
+    }
     if (currentStep < 6) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -471,6 +500,14 @@ export default function NewBookWizard() {
   };
 
   const handlePublishSubmit = async () => {
+    if (formData.pages > 1 && formData.previewPages >= formData.pages) {
+      const maxLimit = formData.pages - 1;
+      const msg = `Free Preview Limit (${formData.previewPages} pages) must be less than the total pages (${formData.pages} pages). Max allowed: ${maxLimit}.`;
+      setErrorMessage(msg);
+      showErrorAlert("Invalid Preview Limit", msg);
+      return;
+    }
+
     setIsSubmitting(true);
     setUploadProgress(10);
     setErrorMessage("");
@@ -1526,8 +1563,19 @@ export default function NewBookWizard() {
                   </div>
                   <input
                     type="number"
+                    min={1}
                     value={formData.pages}
-                    onChange={(e) => setFormData({ ...formData, pages: parseInt(e.target.value) || 100 })}
+                    onChange={(e) => {
+                      const newPages = Math.max(1, parseInt(e.target.value) || 1);
+                      setFormData((prev) => ({
+                        ...prev,
+                        pages: newPages,
+                        previewPages:
+                          newPages > 1 && prev.previewPages >= newPages
+                            ? Math.max(1, newPages - 1)
+                            : prev.previewPages,
+                      }));
+                    }}
                     className="w-full px-4 py-3 rounded-xl text-sm bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] font-semibold"
                   />
                 </div>
@@ -1602,15 +1650,42 @@ export default function NewBookWizard() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[var(--foreground)] block mb-1.5">
-                    Free Preview Limit (Pages)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-[var(--foreground)]">
+                      Free Preview Limit (Pages)
+                    </label>
+                    <span className="text-[11px] text-[var(--muted)] font-mono">
+                      Must be &lt; {formData.pages} (Max: {Math.max(1, formData.pages - 1)})
+                    </span>
+                  </div>
                   <input
                     type="number"
+                    min={1}
+                    max={Math.max(1, formData.pages - 1)}
                     value={formData.previewPages}
-                    onChange={(e) => setFormData({ ...formData, previewPages: parseInt(e.target.value) || 10 })}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      const maxLimit = Math.max(1, formData.pages - 1);
+                      if (isNaN(val)) {
+                        setFormData((prev) => ({ ...prev, previewPages: 1 }));
+                      } else {
+                        setFormData((prev) => ({
+                          ...prev,
+                          previewPages: Math.max(1, Math.min(val, maxLimit)),
+                        }));
+                      }
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl text-sm bg-[var(--background)] border ${
+                      formData.previewPages >= formData.pages && formData.pages > 1
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-[var(--border)] focus:ring-[var(--primary)]"
+                    } text-[var(--foreground)] focus:outline-none focus:ring-2`}
                   />
+                  {formData.previewPages >= formData.pages && formData.pages > 1 && (
+                    <p className="text-[11px] text-red-500 mt-1 font-medium">
+                      Free Preview Limit must be strictly less than total pages ({formData.pages}).
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center pt-6">
