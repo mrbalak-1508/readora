@@ -37,6 +37,8 @@ interface ReaderContextType {
   setAnimation3d: (enabled: boolean) => void;
   animationSpeed: AnimationSpeed;
   setAnimationSpeed: (speed: AnimationSpeed) => void;
+  touchTurnEnabled: boolean;
+  setTouchTurnEnabled: (enabled: boolean) => void;
   hasFullAccess: boolean;
   previewLimit: number | null;
   watermarkText: string | null;
@@ -81,6 +83,7 @@ export function ReaderProvider({
   const [soundProfile, setSoundProfileState] = useState<SoundProfile>("parchment");
   const [animation3d, setAnimation3dState] = useState<boolean>(true);
   const [animationSpeed, setAnimationSpeedState] = useState<AnimationSpeed>("normal");
+  const [touchTurnEnabled, setTouchTurnEnabledState] = useState<boolean>(true);
   const isInitiallyFree =
     initialBook.accessType === "FREE" || (initialBook.price === 0 && !initialBook.accessType);
   const effectiveFull = initialHasFullAccess !== undefined ? initialHasFullAccess : isInitiallyFree;
@@ -123,6 +126,9 @@ export function ReaderProvider({
 
     const savedSpeed = localStorage.getItem("readora_reader_speed") as AnimationSpeed;
     if (savedSpeed) setAnimationSpeedState(savedSpeed);
+
+    const savedTouchTurn = localStorage.getItem("readora_reader_touch_turn");
+    if (savedTouchTurn !== null) setTouchTurnEnabledState(savedTouchTurn === "true");
 
     // Load server access & preview limits
     async function checkAccess() {
@@ -243,6 +249,11 @@ export function ReaderProvider({
   const handleSetAnimationSpeed = (speed: AnimationSpeed) => {
     setAnimationSpeedState(speed);
     localStorage.setItem("readora_reader_speed", speed);
+  };
+
+  const handleSetTouchTurnEnabled = (enabled: boolean) => {
+    setTouchTurnEnabledState(enabled);
+    localStorage.setItem("readora_reader_touch_turn", enabled ? "true" : "false");
   };
 
   // Debounced progress persistence to SQLite API & localStorage
@@ -418,6 +429,8 @@ export function ReaderProvider({
         setAnimation3d: handleSetAnimation3d,
         animationSpeed,
         setAnimationSpeed: handleSetAnimationSpeed,
+        touchTurnEnabled,
+        setTouchTurnEnabled: handleSetTouchTurnEnabled,
         hasFullAccess,
         previewLimit,
         watermarkText,

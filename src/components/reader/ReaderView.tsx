@@ -39,6 +39,7 @@ export function ReaderView() {
     lineHeight,
     textAlign,
     soundEnabled,
+    touchTurnEnabled,
     hasFullAccess,
     previewLimit,
     watermarkText,
@@ -249,7 +250,7 @@ export function ReaderView() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [safePage, totalPages, hasFullAccess, previewLimit, isDual, isPdfBook]);
 
-  // Handle tap / click on the reader stage: Left 35% -> Prev, Right 35% -> Next, Center 30% -> Toggle chrome
+  // Handle tap / click on the reader stage: Left 25% -> Prev, Right 25% -> Next, Center 50% -> Toggle chrome
   const handleStageClick = (e: React.MouseEvent<HTMLElement>) => {
     if (zoom > 1.0) return;
 
@@ -272,37 +273,13 @@ export function ReaderView() {
     const width = stageRect.width;
     const ratio = clickX / width;
 
-    if (ratio < 0.35) {
+    if (ratio < 0.25) {
       handlePrev();
-    } else if (ratio > 0.65) {
+    } else if (ratio > 0.75) {
       handleNext();
     } else {
       setShowChrome((prev) => !prev);
     }
-  };
-
-  const handleStageTouchStart = (e: React.TouchEvent) => {
-    if (zoom > 1.0) return;
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleStageTouchEnd = (e: React.TouchEvent) => {
-    if (zoom > 1.0 || touchStartX.current === null || touchStartY.current === null) return;
-    const diffX = e.changedTouches[0].clientX - touchStartX.current;
-    const diffY = e.changedTouches[0].clientY - touchStartY.current;
-
-    // Detect horizontal swipe gesture (> 36px and dominant over vertical)
-    if (Math.abs(diffX) > 36 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
-      if (diffX < 0) {
-        handleNext(); // swipe left -> next page
-      } else {
-        handlePrev(); // swipe right -> prev page
-      }
-    }
-
-    touchStartX.current = null;
-    touchStartY.current = null;
   };
 
   // Handle text selection
@@ -452,11 +429,6 @@ export function ReaderView() {
           e.stopPropagation();
           handlePrev();
         }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handlePrev();
-        }}
         disabled={safePage <= 1}
         className="fixed left-0.5 sm:left-3 lg:left-6 top-1/2 -translate-y-1/2 z-40 w-8 sm:w-11 h-12 sm:h-16 rounded-lg sm:rounded-2xl bg-black/50 sm:bg-white/80 dark:bg-black/70 hover:bg-black/80 sm:hover:bg-white dark:hover:bg-black/90 text-white sm:text-current shadow-lg shadow-black/20 hover:shadow-xl hover:scale-105 active:scale-95 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer flex items-center justify-center backdrop-blur-md border border-white/20 dark:border-white/10 group touch-manipulation pointer-events-auto"
         title="Previous Page (← or Page Up)"
@@ -468,11 +440,6 @@ export function ReaderView() {
       <button
         type="button"
         onClick={(e) => {
-          e.stopPropagation();
-          handleNext();
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
           e.stopPropagation();
           handleNext();
         }}
@@ -488,8 +455,6 @@ export function ReaderView() {
       <main
         ref={containerRef}
         onClick={handleStageClick}
-        onTouchStart={handleStageTouchStart}
-        onTouchEnd={handleStageTouchEnd}
         onMouseUp={handleMouseUp}
         className="flex-1 w-full max-w-7xl mx-auto px-1 sm:px-4 pt-14 sm:pt-16 pb-16 sm:pb-24 flex items-center justify-center relative z-10 perspective-book min-h-0 cursor-default select-text overflow-hidden"
       >
@@ -516,6 +481,7 @@ export function ReaderView() {
             zoom={zoom}
             soundEnabled={soundEnabled}
             spreadMode={spreadMode}
+            touchTurnEnabled={touchTurnEnabled}
             onPageChange={handleReaderPageChange}
             onUnlockRequest={() => setIsPaywallOpen(true)}
           />
@@ -574,11 +540,6 @@ export function ReaderView() {
                 e.stopPropagation();
                 handlePrev();
               }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handlePrev();
-              }}
               disabled={safePage <= 1}
               className="p-1.5 sm:p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10 opacity-75 hover:opacity-100 disabled:opacity-30 disabled:pointer-events-none transition-colors touch-manipulation cursor-pointer active:scale-95 pointer-events-auto"
               title="Previous Page"
@@ -622,11 +583,6 @@ export function ReaderView() {
             <button
               type="button"
               onClick={(e) => {
-                e.stopPropagation();
-                handleNext();
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
                 handleNext();
               }}

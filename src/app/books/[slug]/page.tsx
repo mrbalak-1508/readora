@@ -198,7 +198,7 @@ export default function BookDetailPage() {
         }}
       />
 
-      <main className="flex-1 py-10 sm:py-16">
+      <main className="flex-1 py-10 sm:py-16 overflow-x-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Main Book Presentation Card */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
@@ -347,42 +347,42 @@ export default function BookDetailPage() {
 
               {/* Meta Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-[var(--border)] text-xs">
-                <div>
-                  <span className="text-[var(--muted)] block">Pages</span>
-                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5">
-                    <Layers className="w-3.5 h-3.5 text-[var(--primary)]" />
-                    {book.pages} pages
+                <div className="min-w-0">
+                  <span className="text-[var(--muted)] block truncate">Pages</span>
+                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5 truncate">
+                    <Layers className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                    <span className="truncate">{book.pages} pages</span>
                   </span>
                 </div>
-                <div>
-                  <span className="text-[var(--muted)] block">Est. Reading Time</span>
-                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-[var(--secondary)]" />
-                    ~{Math.round(book.pages * 1.4)} mins
+                <div className="min-w-0">
+                  <span className="text-[var(--muted)] block truncate">Est. Reading Time</span>
+                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5 truncate">
+                    <Clock className="w-3.5 h-3.5 text-[var(--secondary)] shrink-0" />
+                    <span className="truncate">~{Math.round(book.pages * 1.4)} mins</span>
                   </span>
                 </div>
-                <div>
-                  <span className="text-[var(--muted)] block">Language</span>
-                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5">
-                    <Globe className="w-3.5 h-3.5 text-[var(--soft-blue)]" />
-                    {book.language}
+                <div className="min-w-0">
+                  <span className="text-[var(--muted)] block truncate">Language</span>
+                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5 truncate">
+                    <Globe className="w-3.5 h-3.5 text-[var(--soft-blue)] shrink-0" />
+                    <span className="truncate">{book.language}</span>
                   </span>
                 </div>
-                <div>
-                  <span className="text-[var(--muted)] block">Published</span>
-                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5">
-                    <Calendar className="w-3.5 h-3.5 text-[var(--accent)]" />
-                    {book.publicationDate}
+                <div className="min-w-0">
+                  <span className="text-[var(--muted)] block truncate">Published</span>
+                  <span className="font-bold text-[var(--foreground)] flex items-center gap-1 mt-0.5 truncate">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                    <span className="truncate">{book.publicationDate}</span>
                   </span>
                 </div>
               </div>
 
               {/* Synopsis */}
-              <div>
+              <div className="min-w-0">
                 <h2 className="font-editorial text-xl font-bold text-[var(--foreground)] mb-2">
                   About the Book
                 </h2>
-                <p className="text-sm text-[var(--muted)] leading-relaxed whitespace-pre-line">
+                <p className="text-sm text-[var(--muted)] leading-relaxed whitespace-pre-line break-words">
                   {book.description}
                 </p>
               </div>
@@ -407,10 +407,10 @@ export default function BookDetailPage() {
 
           {/* Table of Contents Section */}
           {book.tableOfContents && book.tableOfContents.length > 0 && (
-            <div className="mb-16 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8">
+            <div className="mb-16 bg-[var(--card)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 overflow-hidden max-w-full">
               <div className="flex items-center gap-2 mb-6">
-                <FileText className="w-5 h-5 text-[var(--primary)]" />
-                <h2 className="font-editorial text-2xl font-bold text-[var(--foreground)]">
+                <FileText className="w-5 h-5 text-[var(--primary)] shrink-0" />
+                <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[var(--foreground)]">
                   Table of Contents
                 </h2>
               </div>
@@ -420,17 +420,17 @@ export default function BookDetailPage() {
                   <Link
                     key={index}
                     href={`/read/${book.id}?page=${item.page}`}
-                    className="py-3.5 flex items-center justify-between group hover:text-[var(--primary)] transition-colors"
+                    className="py-3.5 flex items-center justify-between group hover:text-[var(--primary)] transition-colors gap-2 min-w-0"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-[var(--muted)] opacity-60 w-6">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-xs font-mono text-[var(--muted)] opacity-60 w-6 shrink-0">
                         0{index + 1}
                       </span>
-                      <span className="text-sm font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                      <span className="text-sm font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] truncate">
                         {item.title}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--muted)]">Page {item.page}</span>
+                    <span className="text-xs text-[var(--muted)] shrink-0">Page {item.page}</span>
                   </Link>
                 ))}
               </div>

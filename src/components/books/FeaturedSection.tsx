@@ -40,7 +40,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         {/* Main Large Featured Layout */}
-        <div className="lg:col-span-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 sm:p-8 flex flex-col sm:flex-row gap-6 sm:gap-8 items-center book-cover-shadow">
+        <div className="lg:col-span-8 rounded-2xl sm:rounded-3xl border border-[var(--border)] bg-[var(--card)] p-4 sm:p-8 flex flex-col sm:flex-row gap-6 sm:gap-8 items-center book-cover-shadow overflow-hidden max-w-full">
           {/* Main Book Cover */}
           <Link
             href={`/books/${mainBook.slug}`}
@@ -59,9 +59,9 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
           </Link>
 
           {/* Main Info */}
-          <div className="flex-1 flex flex-col justify-between h-full">
+          <div className="flex-1 flex flex-col justify-between h-full min-w-0 w-full">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--primary)] bg-[var(--accent-light)] px-2.5 py-0.5 rounded-full">
                   {mainBook.categoryName}
                 </span>
@@ -72,23 +72,23 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
               </div>
 
               <Link href={`/books/${mainBook.slug}`}>
-                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--foreground)] hover:text-[var(--primary)] transition-colors leading-tight">
+                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--foreground)] hover:text-[var(--primary)] transition-colors leading-tight break-words">
                   {mainBook.title}
                 </h3>
               </Link>
-              <p className="text-sm font-medium text-[var(--muted)] mt-1">
+              <p className="text-sm font-medium text-[var(--muted)] mt-1 truncate">
                 by {mainBook.author}
               </p>
 
-              <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed mt-4 line-clamp-4">
+              <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed mt-4 line-clamp-4 break-words">
                 {mainBook.description}
               </p>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-[var(--border)] flex items-center gap-3">
+            <div className="mt-6 pt-6 border-t border-[var(--border)] flex flex-wrap items-center gap-2.5 sm:gap-3 w-full">
               <Link
                 href={`/read/${mainBook.id}`}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs text-center"
               >
                 <BookOpen className="w-4 h-4" />
                 <span>
@@ -102,7 +102,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
 
               <Link
                 href={`/books/${mainBook.slug}`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors text-center"
               >
                 <span>Book Details</span>
               </Link>

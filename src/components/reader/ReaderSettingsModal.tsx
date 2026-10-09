@@ -14,6 +14,7 @@ import {
   Zap,
   Bookmark,
   Search,
+  Smartphone,
 } from "lucide-react";
 import { SOUND_PROFILES, soundManager } from "@/lib/sound";
 
@@ -51,6 +52,8 @@ export function ReaderSettingsModal({
     setAnimation3d,
     animationSpeed,
     setAnimationSpeed,
+    touchTurnEnabled,
+    setTouchTurnEnabled,
   } = useReader();
 
   if (!isOpen) return null;
@@ -187,6 +190,37 @@ export function ReaderSettingsModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Finger / Touch Swipe Turn */}
+          <div className="p-4 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 pr-3">
+                <Smartphone className="w-4 h-4 text-[var(--accent)]" />
+                <div>
+                  <span className="text-xs font-bold text-[var(--foreground)] block">
+                    Finger Swipe Page Turn
+                  </span>
+                  <span className="text-[11px] text-[var(--muted)]">
+                    Swipe left/right with your finger to turn pages. Turn off to avoid double-flips and use bottom buttons only.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTouchTurnEnabled(!touchTurnEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                  touchTurnEnabled ? "bg-[var(--accent)]" : "bg-[var(--muted)]/40"
+                }`}
+                aria-label="Toggle Finger Swipe Page Turn"
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                    touchTurnEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Sound Effects & Volume */}

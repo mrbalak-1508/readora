@@ -35,6 +35,7 @@ interface BookReaderProps {
   zoom?: number;
   soundEnabled?: boolean;
   spreadMode?: "dual" | "single";
+  touchTurnEnabled?: boolean;
   onPageChange?: (pageNumber: number) => void;
   onUnlockRequest?: () => void;
 }
@@ -61,6 +62,7 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
     zoom = 1.0,
     soundEnabled = false,
     spreadMode = "dual",
+    touchTurnEnabled = true,
     onPageChange,
     onUnlockRequest,
   },
@@ -147,57 +149,101 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
     ref,
     () => ({
       flipNext: () => {
+        if (isFlippingRef.current) return;
+        const step = isPortraitMode ? 1 : 2;
+        const targetPage = Math.min(totalPages, currentPage + step);
+        if (targetPage === currentPage) return;
+
+        isFlippingRef.current = true;
+        setTimeout(() => {
+          isFlippingRef.current = false;
+        }, 700);
+
         try {
           const pf = flipBookRef.current?.pageFlip();
           if (pf) {
+            const currentZero = pf.getCurrentPageIndex();
+            const targetZero = targetPage - 1;
+            if (currentZero !== currentPage - 1) {
+              pf.turnToPage(currentPage - 1);
+            }
             pf.flipNext();
+            // Guarantee reliable state update even if PageFlip animation skips onFlip
+            setTimeout(() => {
+              try {
+                const afterZero = pf.getCurrentPageIndex();
+                if (afterZero !== targetZero) {
+                  pf.turnToPage(targetZero);
+                  setCurrentPage(targetPage);
+                  onPageChange?.(targetPage);
+                }
+              } catch {}
+            }, 680);
             return;
           }
         } catch (err) {
           console.warn("flipNext error, using fallback:", err);
         }
         // Fallback if flipbook instance is unavailable
-        const step = isPortraitMode ? 1 : 2;
-        const next = Math.min(totalPages, currentPage + step);
-        if (next !== currentPage) {
-          if (soundEnabled) soundManager.playPageTurn();
-          setCurrentPage(next);
-          onPageChange?.(next);
-        }
+        if (soundEnabled) soundManager.playPageTurn();
+        setCurrentPage(targetPage);
+        onPageChange?.(targetPage);
       },
       flipPrev: () => {
+        if (isFlippingRef.current) return;
+        const step = isPortraitMode ? 1 : 2;
+        const targetPage = Math.max(1, currentPage - step);
+        if (targetPage === currentPage) return;
+
+        isFlippingRef.current = true;
+        setTimeout(() => {
+          isFlippingRef.current = false;
+        }, 700);
+
         try {
           const pf = flipBookRef.current?.pageFlip();
           if (pf) {
+            const currentZero = pf.getCurrentPageIndex();
+            const targetZero = targetPage - 1;
+            if (currentZero !== currentPage - 1) {
+              pf.turnToPage(currentPage - 1);
+            }
             pf.flipPrev();
+            // Guarantee reliable state update even if PageFlip animation skips onFlip
+            setTimeout(() => {
+              try {
+                const afterZero = pf.getCurrentPageIndex();
+                if (afterZero !== targetZero) {
+                  pf.turnToPage(targetZero);
+                  setCurrentPage(targetPage);
+                  onPageChange?.(targetPage);
+                }
+              } catch {}
+            }, 680);
             return;
           }
         } catch (err) {
           console.warn("flipPrev error, using fallback:", err);
         }
         // Fallback if flipbook instance is unavailable
-        const step = isPortraitMode ? 1 : 2;
-        const prev = Math.max(1, currentPage - step);
-        if (prev !== currentPage) {
-          if (soundEnabled) soundManager.playPageTurn();
-          setCurrentPage(prev);
-          onPageChange?.(prev);
-        }
+        if (soundEnabled) soundManager.playPageTurn();
+        setCurrentPage(targetPage);
+        onPageChange?.(targetPage);
       },
       turnToPage: (targetPage: number) => {
+        const clamped = Math.max(1, Math.min(totalPages, targetPage));
+        const zeroIndex = clamped - 1;
         try {
-          const zeroIndex = Math.max(0, Math.min(totalPages - 1, targetPage - 1));
           const pf = flipBookRef.current?.pageFlip();
           if (pf) {
             pf.turnToPage(zeroIndex);
-            return;
           }
         } catch (err) {
           console.warn("turnToPage error, using fallback:", err);
         }
         if (soundEnabled) soundManager.playPageTurn();
-        setCurrentPage(targetPage);
-        onPageChange?.(targetPage);
+        setCurrentPage(clamped);
+        onPageChange?.(clamped);
       },
       getCurrentPage: () => currentPage,
     }),
@@ -302,8 +348,8 @@ export const BookReader = forwardRef<BookReaderHandle, BookReaderProps>(function
             maxHeight={1100}
             showCover={false}
             mobileScrollSupport={false}
-            useMouseEvents={zoom <= 1.0}
-            disableFlipByClick={false}
+            useMouseEvents={Boolean(touchTurnEnabled && zoom <= 1.0)}
+            disableFlipByClick={true}
             drawShadow={true}
             flippingTime={650}
             usePortrait={isPortraitMode}
