@@ -121,7 +121,7 @@ async function main() {
       description: "Unlimited access to thousands of curated digital volumes and audio experiences.",
       benefits: JSON.stringify([
         "Unlimited access to all eligible books",
-        "3D realistic page-turning reader",
+        "Distraction-free digital reader",
         "Reading history and progress sync across devices",
         "Personalized bookmarks, highlights and marginalia notes",
         "Offline reading cache capability",
@@ -142,7 +142,7 @@ async function main() {
       description: "Unlimited access to thousands of curated digital volumes and audio experiences.",
       benefits: JSON.stringify([
         "Unlimited access to all eligible books",
-        "3D realistic page-turning reader",
+        "Distraction-free digital reader",
         "Reading history and progress sync across devices",
         "Personalized bookmarks, highlights and marginalia notes",
         "Offline reading cache capability",
