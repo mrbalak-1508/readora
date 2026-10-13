@@ -61,15 +61,17 @@ export async function POST(request: Request) {
     });
 
     // Log admin activity
-    await prisma.adminActivity.create({
-      data: {
-        adminId: admin.id,
-        action: "CATEGORY_CREATE",
-        targetType: "CATEGORY",
-        targetId: category.id,
-        details: JSON.stringify({ name: category.name, slug: category.slug }),
-      },
-    }).catch(() => {});
+    if ((prisma as any).adminActivity?.create) {
+      await (prisma as any).adminActivity.create({
+        data: {
+          adminId: admin.id,
+          action: "CATEGORY_CREATE",
+          targetType: "CATEGORY",
+          targetId: category.id,
+          details: JSON.stringify({ name: category.name, slug: category.slug }),
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json(category, { status: 201 });
   } catch (error: any) {

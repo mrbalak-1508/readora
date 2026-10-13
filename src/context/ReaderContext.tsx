@@ -14,6 +14,11 @@ interface ReaderContextType {
   setBook: (book: Book) => void;
   currentPage: number;
   totalPages: number;
+  setTotalPages: (total: number) => void;
+  zoom: number;
+  setZoom: (zoom: number | ((prev: number) => number)) => void;
+  fitMode: "width" | "page";
+  setFitMode: (mode: "width" | "page") => void;
   currentChapterTitle: string;
   theme: ReaderTheme;
   setTheme: (theme: ReaderTheme) => void;
@@ -50,8 +55,10 @@ interface ReaderContextType {
   nextPage: () => void;
   prevPage: () => void;
   highlights: Highlight[];
-  addHighlight: (text: string, color: Highlight["color"], note?: string) => void;
+  addHighlight: (text: string, color: Highlight["color"], note?: string, pageNumber?: number) => void;
   removeHighlight: (id: string) => void;
+  isPanMode: boolean;
+  setIsPanMode: (mode: boolean | ((prev: boolean) => boolean)) => void;
   readingTimeSeconds: number;
   isCompleted: boolean;
   markCompleted: () => void;
@@ -71,17 +78,20 @@ export function ReaderProvider({
 }) {
   const [book, setBook] = useState<Book>(initialBook);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(initialBook.pages || 1);
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [fitMode, setFitMode] = useState<"width" | "page">("width");
   const [currentChapterTitle, setCurrentChapterTitle] = useState<string>("");
   const [theme, setTheme] = useState<ReaderTheme>("paper");
   const [font, setFont] = useState<ReaderFont>("serif");
   const [fontSize, setFontSize] = useState<number>(16);
   const [lineHeight, setLineHeight] = useState<number>(1.65);
   const [textAlign, setTextAlign] = useState<"left" | "justify">("left");
-  const [pageMode, setPageMode] = useState<"scroll" | "paged">("paged");
+  const [pageMode, setPageMode] = useState<"scroll" | "paged">("scroll");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(false);
   const [soundVolume, setSoundVolumeState] = useState<number>(0.8);
   const [soundProfile, setSoundProfileState] = useState<SoundProfile>("parchment");
-  const [animation3d, setAnimation3dState] = useState<boolean>(true);
+  const [animation3d, setAnimation3dState] = useState<boolean>(false);
   const [animationSpeed, setAnimationSpeedState] = useState<AnimationSpeed>("normal");
   const [touchTurnEnabled, setTouchTurnEnabledState] = useState<boolean>(true);
   const isInitiallyFree =
@@ -95,6 +105,7 @@ export function ReaderProvider({
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [isPanMode, setIsPanMode] = useState<boolean>(false);
   const [readingTimeSeconds, setReadingTimeSeconds] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
 
@@ -319,10 +330,10 @@ export function ReaderProvider({
 
   const nextPage = useCallback(() => {
     if (!book) return;
-    if (currentPage < book.pages) {
+    if (currentPage < totalPages) {
       goToPage(currentPage + 1);
     }
-  }, [book, currentPage, goToPage]);
+  }, [book, currentPage, totalPages, goToPage]);
 
   const prevPage = useCallback(() => {
     if (currentPage > 1) {
@@ -362,13 +373,19 @@ export function ReaderProvider({
   };
 
   // Highlights
-  const addHighlight = (text: string, color: Highlight["color"], note?: string) => {
+  const addHighlight = (
+    text: string,
+    color: Highlight["color"],
+    note?: string,
+    pageNumber?: number
+  ) => {
     if (!book) return;
+    const targetPage = typeof pageNumber === "number" ? pageNumber : currentPage;
     const newHl: Highlight = {
       id: `hl-${Date.now()}`,
       userId: "current-user",
       bookId: book.id,
-      page: currentPage,
+      page: targetPage,
       chapterTitle: currentChapterTitle,
       selectedText: text,
       color,
@@ -405,7 +422,12 @@ export function ReaderProvider({
         book,
         setBook,
         currentPage,
-        totalPages: book?.pages || 1,
+        totalPages,
+        setTotalPages,
+        zoom,
+        setZoom,
+        fitMode,
+        setFitMode,
         currentChapterTitle,
         theme,
         setTheme: handleSetTheme,
@@ -444,6 +466,8 @@ export function ReaderProvider({
         highlights,
         addHighlight,
         removeHighlight,
+        isPanMode,
+        setIsPanMode,
         readingTimeSeconds,
         isCompleted,
         markCompleted,

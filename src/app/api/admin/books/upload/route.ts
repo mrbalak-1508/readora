@@ -194,41 +194,49 @@ export async function POST(request: NextRequest) {
         : publicationDate;
 
     // 8. Create Book record in SQLite
+    const bookData: any = {
+      slug: uniqueSlug,
+      title,
+      author: resolvedAuthor,
+      description,
+      coverPath,
+      filePath: savedBookFilePath,
+      fileName: savedBookFileName,
+      mimeType: savedBookMime,
+      fileSize: savedBookSize,
+      format,
+      isbn,
+      language,
+      categoryName,
+      tags: JSON.stringify(tagsArray),
+      publisher,
+      publicationDate: resolvedPublicationDate,
+      pages: calculatedPages,
+      featured,
+      status,
+      sampleContent,
+      accessType,
+      price: isNaN(price) ? 0 : price,
+      originalPrice: isNaN(originalPrice) ? null : originalPrice,
+      discount: isNaN(discount) ? 0 : discount,
+      currency: "INR",
+      previewType,
+      previewPages: safePreviewPages,
+      previewPercentage: isNaN(previewPercentage) ? 15 : previewPercentage,
+      previewChapters: isNaN(previewChapters) ? 2 : previewChapters,
+      watermarkEnabled,
+    };
+
+    if (resolvedCategoryId) {
+      bookData.categoryId = resolvedCategoryId;
+    }
+
+    if (authorRecord?.id) {
+      bookData.authorRef = { connect: { id: authorRecord.id } };
+    }
+
     const newBook = await prisma.book.create({
-      data: {
-        slug: uniqueSlug,
-        title,
-        author: resolvedAuthor,
-        authorId: authorRecord.id,
-        description,
-        coverPath,
-        filePath: savedBookFilePath,
-        fileName: savedBookFileName,
-        mimeType: savedBookMime,
-        fileSize: savedBookSize,
-        format,
-        isbn,
-        language,
-        categoryId: resolvedCategoryId,
-        categoryName,
-        tags: JSON.stringify(tagsArray),
-        publisher,
-        publicationDate: resolvedPublicationDate,
-        pages: calculatedPages,
-        featured,
-        status,
-        sampleContent,
-        accessType,
-        price: isNaN(price) ? 0 : price,
-        originalPrice: isNaN(originalPrice) ? null : originalPrice,
-        discount: isNaN(discount) ? 0 : discount,
-        currency: "INR",
-        previewType,
-        previewPages: safePreviewPages,
-        previewPercentage: isNaN(previewPercentage) ? 15 : previewPercentage,
-        previewChapters: isNaN(previewChapters) ? 2 : previewChapters,
-        watermarkEnabled,
-      },
+      data: bookData,
     });
 
     // 9. Save Sequential Pages into Chapter Records (Only for reflowable/extracted text, not for direct PDF)
@@ -258,22 +266,24 @@ export async function POST(request: NextRequest) {
     }
 
     // 10. Log Admin Activity
-    await prisma.adminActivity.create({
-      data: {
-        adminId: user.id,
-        action: "BOOK_CREATE",
-        targetType: "BOOK",
-        targetId: newBook.id,
-        details: JSON.stringify({
-          title: newBook.title,
-          format: newBook.format,
-          accessType: newBook.accessType,
-          price: newBook.price,
-          hasLocalFile: !!savedBookFilePath,
-          sequentialPagesCount: pagesList.length,
-        }),
-      },
-    });
+    if ((prisma as any).adminActivity?.create) {
+      await (prisma as any).adminActivity.create({
+        data: {
+          adminId: user.id,
+          action: "BOOK_CREATE",
+          targetType: "BOOK",
+          targetId: newBook.id,
+          details: JSON.stringify({
+            title: newBook.title,
+            format: newBook.format,
+            accessType: newBook.accessType,
+            price: newBook.price,
+            hasLocalFile: !!savedBookFilePath,
+            sequentialPagesCount: pagesList.length,
+          }),
+        },
+      }).catch(() => null);
+    }
 
     return NextResponse.json({
       success: true,

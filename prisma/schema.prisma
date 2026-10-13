@@ -6,13 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum UserRole {
-  USER
-  ADMIN
 }
 
 model User {
@@ -118,12 +113,21 @@ model Book {
   previewChapters Int              @default(2)
   watermarkEnabled Boolean         @default(true)
 
+  // Permission and delivery restrictions
+  allowDownload   Boolean          @default(false)
+  allowPrint      Boolean          @default(false)
+  allowCopy       Boolean          @default(false)
+  allowFreeToc    Boolean          @default(true)
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
   authorRef       Author?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
   category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   chapters        Chapter[]
+  assets          BookAsset[]
+  versions        BookVersion[]
+  uploadJobs      UploadJob[]
   libraryItems    LibraryItem[]
   progress        ReadingProgress[]
   sessions        ReadingSession[]
@@ -143,14 +147,29 @@ model Book {
 }
 
 model Chapter {
-  id        String   @id @default(uuid())
-  bookId    String
-  title     String
-  page      Int      @default(1)
-  content   String?
-  order     Int      @default(0)
+  id                 String            @id @default(uuid())
+  bookId             String
+  title              String
+  subtitle           String?
+  slug               String?
+  page               Int               @default(1)
+  content            String?           // Formatted clean HTML for reader
+  contentJson        String?           // Structured Tiptap editor document JSON
+  order              Int               @default(0)
+  status             String            @default("PUBLISHED") // DRAFT, PUBLISHED
+  isSection          Boolean           @default(false)
+  parentId           String?
+  wordCount          Int               @default(0)
+  readingTimeMinutes Int               @default(1)
+  previewAllowed     Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
 
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book               Book              @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  revisions          ChapterRevision[]
+
+  @@index([bookId])
+  @@index([order])
 }
 
 model LibraryItem {
@@ -177,6 +196,8 @@ model ReadingProgress {
   currentPage      Int       @default(1)
   totalPages       Int       @default(1)
   currentChapter   String?
+  currentChapterId String?
+  currentCfi       String?
   percentage       Int       @default(0)
   lastOpened       DateTime  @default(now())
   timeSpentSeconds Int       @default(0)
@@ -210,9 +231,13 @@ model Bookmark {
   id           String   @id @default(uuid())
   userId       String
   bookId       String
-  page         Int
+  page         Int      @default(1)
   chapterTitle String?
   snippet      String?
+  contentType  String   @default("PDF") // PDF, EPUB, CHAPTER
+  chapterId    String?
+  cfi          String?
+  note         String?
   createdAt    DateTime @default(now())
 
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -517,4 +542,82 @@ model AdminActivity {
   admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([adminId])
+}
+
+// -------------------------------------------------------------
+// ASSETS, VERSIONING, UPLOAD PROCESSING & CHAPTER REVISIONS
+// -------------------------------------------------------------
+
+model BookAsset {
+  id        String   @id @default(uuid())
+  bookId    String
+  assetType String   // ORIGINAL_PDF, ORIGINAL_EPUB, COVER, THUMBNAIL
+  filePath  String
+  fileName  String
+  mimeType  String
+  fileSize  Int
+  version   Int      @default(1)
+  checksum  String?
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+}
+
+model BookVersion {
+  id            String   @id @default(uuid())
+  bookId        String
+  versionNumber Int      @default(1)
+  filePath      String?
+  fileName      String?
+  fileSize      Int?
+  changeSummary String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+}
+
+model ChapterRevision {
+  id           String   @id @default(uuid())
+  chapterId    String
+  bookId       String
+  title        String
+  content      String?
+  contentJson  String?
+  wordCount    Int      @default(0)
+  editorId     String?
+  editorName   String?
+  revisionNote String?
+  createdAt    DateTime @default(now())
+
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
+  @@index([bookId])
+}
+
+model UploadJob {
+  id           String   @id @default(uuid())
+  bookId       String?
+  fileName     String
+  fileType     String   // PDF, EPUB, COVER
+  fileSize     Int
+  status       String   @default("PENDING") // PENDING, UPLOADING, PROCESSING, READY, FAILED
+  progress     Int      @default(0)
+  stage        String?  // VALIDATING, EXTRACTING_METADATA, STORING, THUMBNAIL, READY
+  errorMessage String?
+  retryCount   Int      @default(0)
+  metadata     String?  // JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  book         Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  @@index([bookId])
+  @@index([status])
 }

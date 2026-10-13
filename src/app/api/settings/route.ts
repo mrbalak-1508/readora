@@ -6,12 +6,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SETTINGS: Record<string, any> = {
-  reader_sound_profile: "parchment",
-  reader_sound_volume: 0.8,
-  reader_sound_url: "",
-  reader_default_sound: false,
-  reader_default_3d: true,
+  reader_default_page_mode: "scroll",
+  reader_default_theme: "paper",
+  reader_default_font: "serif",
+  reader_default_font_size: 18,
+  reader_default_line_height: 1.7,
   reader_watermark_enabled: true,
+  reader_allow_copy: false,
+  reader_allow_print: false,
+  reader_allow_download: false,
 };
 
 // GET: Public endpoint to fetch site/reader settings

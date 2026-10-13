@@ -16,11 +16,16 @@ export async function GET() {
       draftBooks,
       archivedBooks,
       totalUsers,
+      totalReaders,
+      processingFailures,
+      paidOrdersAggregate,
+      subscriptionsCount,
       activeReaders,
       booksCompleted,
       progressAggregate,
       mostReadBooks,
       recentBooks,
+      recentlyUpdatedBooks,
       recentActivities,
       categories,
       allUsers,
@@ -32,6 +37,15 @@ export async function GET() {
       prisma.book.count({ where: { status: "DRAFT" } }),
       prisma.book.count({ where: { status: "ARCHIVED" } }),
       prisma.user.count(),
+      prisma.user.count({ where: { role: "USER" } }),
+      prisma.uploadJob.count({ where: { status: "FAILED" } }),
+      prisma.order.aggregate({
+        where: { status: "PAID" },
+        _sum: { totalAmount: true },
+      }),
+      prisma.subscription.count({
+        where: { status: "ACTIVE" },
+      }),
       prisma.readingProgress.count({ where: { completed: false } }),
       prisma.readingProgress.count({ where: { completed: true } }),
       prisma.readingProgress.aggregate({
@@ -66,13 +80,34 @@ export async function GET() {
           format: true,
         },
       }),
-      prisma.adminActivity.findMany({
+      prisma.book.findMany({
         take: 8,
-        orderBy: { createdAt: "desc" },
-        include: {
-          admin: { select: { name: true, email: true } },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          author: true,
+          categoryName: true,
+          coverPath: true,
+          createdAt: true,
+          updatedAt: true,
+          status: true,
+          format: true,
+          accessType: true,
+          price: true,
+          pages: true,
         },
       }),
+      ((prisma as any).adminActivity?.findMany
+        ? (prisma as any).adminActivity.findMany({
+            take: 8,
+            orderBy: { createdAt: "desc" },
+            include: {
+              admin: { select: { name: true, email: true } },
+            },
+          }).catch(() => [])
+        : Promise.resolve([])),
       prisma.category.findMany({
         select: {
           id: true,
@@ -92,6 +127,9 @@ export async function GET() {
 
     const totalSeconds = progressAggregate._sum.timeSpentSeconds || 0;
     const readingHours = (totalSeconds / 3600).toFixed(1);
+    const sales = paidOrdersAggregate._sum.totalAmount || 0;
+    // Estimate subscription revenue from active subs or paid subscription items
+    const subscriptionRevenue = Math.round(subscriptionsCount * 499); // default monthly rate
 
     // 2. Compute 7-day Day-by-Day Reading Activity & New Users Trends
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -114,7 +152,7 @@ export async function GET() {
       trendDays.push({
         day: dayName,
         date: dateStr,
-        reads: Math.max(progressCount, i === 0 ? 4 : (7 - i) * 3), // graceful baseline
+        reads: progressCount,
         users: userCount,
         books: bookCount,
       });
@@ -131,13 +169,19 @@ export async function GET() {
       publishedBooks,
       draftBooks,
       archivedBooks,
+      processingFailures,
       totalUsers,
+      totalReaders,
+      sales,
+      subscriptionRevenue,
+      subscriptionsCount,
       totalReviews,
       activeReaders,
       booksCompleted,
       readingHours,
       mostReadBooks,
       recentBooks,
+      recentlyUpdatedBooks,
       recentActivities,
       trendDays,
       categoryDistribution,

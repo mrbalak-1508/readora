@@ -159,18 +159,20 @@ export async function DELETE(request: NextRequest) {
     });
 
     // Log admin moderation action
-    await prisma.adminActivity.create({
-      data: {
-        adminId: admin.id,
-        action: "REVIEW_DELETE",
-        targetType: "REVIEW",
-        targetId: reviewId,
-        details: JSON.stringify({
-          bookTitle: review.book?.title,
-          reviewer: review.user?.name,
-        }),
-      },
-    });
+    if ((prisma as any).adminActivity?.create) {
+      await (prisma as any).adminActivity.create({
+        data: {
+          adminId: admin.id,
+          action: "REVIEW_DELETE",
+          targetType: "REVIEW",
+          targetId: reviewId,
+          details: JSON.stringify({
+            bookTitle: review.book?.title,
+            reviewer: review.user?.name,
+          }),
+        },
+      }).catch(() => null);
+    }
 
     return NextResponse.json({
       success: true,

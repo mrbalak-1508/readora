@@ -31,12 +31,12 @@ export function CategoryPills({ categories }: CategoryPillsProps) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {featured.map((cat) => (
           <Link
             key={cat.id}
             href={`/explore?category=${cat.slug}`}
-            className="group relative flex flex-col justify-end p-4 rounded-xl overflow-hidden aspect-[4/5] border border-[var(--border-main)] hover:border-[var(--accent)] transition-all shadow-sm"
+            className="group relative flex flex-col justify-end p-3 sm:p-4 rounded-xl overflow-hidden aspect-[4/5] border border-[var(--border-main)] hover:border-[var(--accent)] transition-all shadow-sm"
           >
             {/* Background image with dark editorial overlay */}
             {cat.imageUrl && (
@@ -50,11 +50,11 @@ export function CategoryPills({ categories }: CategoryPillsProps) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent group-hover:from-black/90 transition-colors" />
 
-            <div className="relative z-10 text-white">
-              <h3 className="font-editorial text-base sm:text-lg font-bold leading-tight group-hover:text-amber-200 transition-colors">
+            <div className="relative z-10 text-white min-w-0">
+              <h3 className="font-editorial text-xs sm:text-base md:text-lg font-bold leading-snug group-hover:text-amber-200 transition-colors line-clamp-2 break-words">
                 {cat.name}
               </h3>
-              <p className="text-[11px] text-white/70 mt-1 line-clamp-1">
+              <p className="text-[10px] sm:text-[11px] text-white/70 mt-0.5 sm:mt-1 line-clamp-1">
                 {cat.bookCount || 20}+ Books
               </p>
             </div>

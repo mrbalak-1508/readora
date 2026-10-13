@@ -50,15 +50,15 @@ export function ContinueReadingSection() {
           {/* Details & Progress */}
           <div className="flex-1 min-w-0 w-full">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-main)] truncate">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-main)] truncate" title={current.bookTitle}>
                   {current.bookTitle}
                 </h3>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                   {current.author ? `by ${current.author}` : "Book in Progress"}
                 </p>
               </div>
-              <span className="text-xs font-semibold text-[var(--accent)] bg-[var(--accent-light)] px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold text-[var(--accent)] bg-[var(--accent-light)] px-2.5 py-1 rounded-full shrink-0">
                 {current.percentage}% completed
               </span>
             </div>

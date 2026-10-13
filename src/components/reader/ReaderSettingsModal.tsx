@@ -7,16 +7,10 @@ import {
   Type,
   AlignLeft,
   AlignJustify,
-  Volume2,
-  VolumeX,
-  Layers,
-  Sparkles,
-  Zap,
   Bookmark,
   Search,
-  Smartphone,
+  Square,
 } from "lucide-react";
-import { SOUND_PROFILES, soundManager } from "@/lib/sound";
 
 interface ReaderSettingsModalProps {
   isOpen: boolean;
@@ -42,18 +36,8 @@ export function ReaderSettingsModal({
     setLineHeight,
     textAlign,
     setTextAlign,
-    soundEnabled,
-    setSoundEnabled,
-    soundVolume,
-    setSoundVolume,
-    soundProfile,
-    setSoundProfile,
-    animation3d,
-    setAnimation3d,
-    animationSpeed,
-    setAnimationSpeed,
-    touchTurnEnabled,
-    setTouchTurnEnabled,
+    pageMode,
+    setPageMode,
   } = useReader();
 
   if (!isOpen) return null;
@@ -139,173 +123,7 @@ export function ReaderSettingsModal({
             </div>
           </div>
 
-          {/* 3D Page Animation & Speed */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)] space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[var(--primary)]" />
-                <div>
-                  <span className="text-xs font-bold text-[var(--foreground)] block">
-                    3D Realistic Page-Turning
-                  </span>
-                  <span className="text-[11px] text-[var(--muted)]">
-                    Realistic depth, lighting & paper curl
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAnimation3d(!animation3d)}
-                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                  animation3d ? "bg-[var(--primary)]" : "bg-[var(--muted)]/40"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    animation3d ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
 
-            {animation3d && (
-              <div>
-                <label className="text-[11px] font-semibold text-[var(--muted)] block mb-1.5">
-                  Page Flip Speed
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["fast", "normal", "slow"] as const).map((spd) => (
-                    <button
-                      key={spd}
-                      onClick={() => setAnimationSpeed(spd)}
-                      className={`py-1.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
-                        animationSpeed === spd
-                          ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-2xs"
-                          : "bg-[var(--card)] text-[var(--muted)] border-[var(--border)] hover:bg-[var(--bg-subtle)]"
-                      }`}
-                    >
-                      {spd}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Finger / Touch Swipe Turn */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 pr-3">
-                <Smartphone className="w-4 h-4 text-[var(--accent)]" />
-                <div>
-                  <span className="text-xs font-bold text-[var(--foreground)] block">
-                    Finger Swipe Page Turn
-                  </span>
-                  <span className="text-[11px] text-[var(--muted)]">
-                    Swipe left/right with your finger to turn pages. Turn off to avoid double-flips and use bottom buttons only.
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTouchTurnEnabled(!touchTurnEnabled)}
-                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                  touchTurnEnabled ? "bg-[var(--accent)]" : "bg-[var(--muted)]/40"
-                }`}
-                aria-label="Toggle Finger Swipe Page Turn"
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    touchTurnEnabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Sound Effects & Volume */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border)] space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {soundEnabled ? (
-                  <Volume2 className="w-4 h-4 text-[var(--secondary)]" />
-                ) : (
-                  <VolumeX className="w-4 h-4 text-[var(--muted)]" />
-                )}
-                <div>
-                  <span className="text-xs font-bold text-[var(--foreground)] block">
-                    Reading Sound Effects
-                  </span>
-                  <span className="text-[11px] text-[var(--muted)]">
-                    Tactile page flips, book opens & bookmarks
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                  soundEnabled ? "bg-[var(--secondary)]" : "bg-[var(--muted)]/40"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    soundEnabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {soundEnabled && (
-              <div className="pt-2 space-y-3">
-                <div>
-                  <div className="flex justify-between text-[11px] text-[var(--muted)] mb-1">
-                    <span>Sound Volume</span>
-                    <span className="font-mono">{Math.round(soundVolume * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={soundVolume}
-                    onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
-                    className="w-full accent-[var(--secondary)] cursor-pointer h-1.5 rounded-full"
-                  />
-                </div>
-
-                {/* SFX Timbre / Sound Profile Selection */}
-                <div>
-                  <label className="text-[11px] font-semibold text-[var(--muted)] block mb-1.5">
-                    Page Turn SFX Timbre
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {SOUND_PROFILES.map((p) => {
-                      const isCurrent = (soundProfile || "parchment") === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSoundProfile(p.id);
-                            soundManager.playPageTurn(p.id);
-                          }}
-                          className={`py-1.5 px-2 rounded-xl text-[11px] font-medium border text-center transition-all cursor-pointer truncate ${
-                            isCurrent
-                              ? "bg-[var(--secondary)] text-white border-[var(--secondary)] font-bold shadow-2xs"
-                              : "bg-[var(--card)] text-[var(--muted)] border-[var(--border)] hover:bg-[var(--bg-subtle)]"
-                          }`}
-                          title={p.description}
-                        >
-                          {p.name.replace(/^(Classic |Crisp |Vintage |Digital |Whisper |Custom )/, "")}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Typography Font */}
           <div>
@@ -427,6 +245,41 @@ export function ReaderSettingsModal({
                 <span>Justified Editorial</span>
               </button>
             </div>
+          </div>
+
+          {/* Reading Flow & Direction */}
+          <div>
+            <label className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider block mb-2">
+              Reading Flow & Page Transition
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setPageMode("scroll")}
+                className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  pageMode === "scroll"
+                    ? "border-[var(--primary)] bg-[var(--accent-light)] text-[var(--primary)] font-bold shadow-xs"
+                    : "border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] text-[var(--muted)]"
+                }`}
+              >
+                <AlignJustify className="w-4 h-4" />
+                <span>Vertical Scroll</span>
+              </button>
+
+              <button
+                onClick={() => setPageMode("paged")}
+                className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  pageMode === "paged"
+                    ? "border-[var(--primary)] bg-[var(--accent-light)] text-[var(--primary)] font-bold shadow-xs"
+                    : "border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] text-[var(--muted)]"
+                }`}
+              >
+                <Square className="w-4 h-4" />
+                <span>Single Page</span>
+              </button>
+            </div>
+            <p className="text-[10px] text-[var(--muted)] mt-1.5 opacity-80">
+              Vertical scroll provides natural continuous reading with zero animations.
+            </p>
           </div>
         </div>
       </div>

@@ -48,8 +48,13 @@ export interface Author {
 export interface BookChapter {
   id: string;
   title: string;
+  subtitle?: string;
   page: number;
   content?: string;
+  order?: number;
+  wordCount?: number;
+  readingTimeMinutes?: number;
+  previewAllowed?: boolean;
 }
 
 export type AccessType =
@@ -113,7 +118,11 @@ export interface Bookmark {
   bookId: string;
   page: number;
   chapterTitle?: string;
+  chapterId?: string;
+  contentType?: string;
+  cfi?: string;
   snippet?: string;
+  note?: string;
   createdAt: string;
 }
 

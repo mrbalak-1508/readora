@@ -18,7 +18,7 @@ export const ReadoraAlert = Swal.mixin({
   },
 });
 
-export function showErrorAlert(title: string, text: string) {
+export function showErrorAlert(title: string, text: string = "") {
   return ReadoraAlert.fire({
     icon: "error",
     title,
@@ -31,7 +31,7 @@ export function showErrorAlert(title: string, text: string) {
   });
 }
 
-export function showSuccessAlert(title: string, text: string) {
+export function showSuccessAlert(title: string, text: string = "") {
   return ReadoraAlert.fire({
     icon: "success",
     title,

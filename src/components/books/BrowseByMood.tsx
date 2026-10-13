@@ -103,24 +103,24 @@ export function BrowseByMood() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {moods.map((mood) => (
           <Link
             key={mood.moodKey}
             href={`/explore?mood=${mood.moodKey}`}
-            className={`p-5 rounded-3xl border transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group flex items-start gap-4 ${mood.bgClass} ${mood.borderClass}`}
+            className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group flex items-start gap-3 sm:gap-4 ${mood.bgClass} ${mood.borderClass}`}
           >
-            <div className="p-3 rounded-2xl bg-white/90 shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-white/90 shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
               {mood.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className={`font-editorial font-bold text-base ${mood.textClass}`}>
+              <div className="flex items-center justify-between gap-1.5">
+                <h3 className={`font-editorial font-bold text-sm sm:text-base truncate ${mood.textClass}`}>
                   {mood.title}
                 </h3>
-                <ArrowRight className="w-4 h-4 text-black/30 group-hover:text-black/70 group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="w-4 h-4 text-black/30 group-hover:text-black/70 group-hover:translate-x-1 transition-all shrink-0" />
               </div>
-              <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed line-clamp-2">
+              <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed line-clamp-2 break-words">
                 {mood.tagline}
               </p>
             </div>

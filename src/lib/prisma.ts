@@ -1,20 +1,36 @@
 import { PrismaClient } from "@prisma/client";
+import path from "path";
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.POSTGRES_URL ||
-    process.env.PRISMA_DATABASE_URL ||
-    "postgres://c518e00a2aba309db7a04f1018c8460ce8a28e5178d28452ea92de6a150ba173:sk_Fw3XMl1KEuJuJQCdv2Aov@db.prisma.io:5432/postgres?sslmode=require";
+// Ensure DATABASE_URL consistently resolves to prisma/dev.db
+const absoluteDbPath = path.resolve(process.cwd(), "prisma", "dev.db").replace(/\\/g, "/");
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL === "file:./dev.db") {
+  process.env.DATABASE_URL = `file:${absoluteDbPath}`;
 }
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// If in-memory client was cached before newer schema models were added, reset it
+if (
+  globalForPrisma.prisma &&
+  (!(globalForPrisma.prisma as any).uploadJob ||
+    !(globalForPrisma.prisma as any).bookAsset ||
+    !(globalForPrisma.prisma as any).bookVersion)
+) {
+  try {
+    globalForPrisma.prisma.$disconnect().catch(() => {});
+  } catch {}
+  globalForPrisma.prisma = undefined;
+}
+
+// Instantiate with the latest generated schema models
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}

@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { getPdfDocument } from "@/lib/pdf/pdfjs";
 import { pageCache } from "@/lib/reader/pageCache";
+import { useReader } from "@/context/ReaderContext";
+import { Highlight } from "@/lib/types";
 import { Loader2, Lock, RefreshCw, Sparkles } from "lucide-react";
 
 interface PdfPageProps {
@@ -11,6 +13,7 @@ interface PdfPageProps {
   width?: number;
   height?: number;
   scale?: number;
+  fitMode?: "width" | "page";
   watermark?: string | null;
   hasFullAccess?: boolean;
   previewLimit?: number;
@@ -19,6 +22,7 @@ interface PdfPageProps {
   isActiveWindow?: boolean;
   onPageRendered?: (pageNum: number, totalPages: number) => void;
   onUnlockRequest?: () => void;
+  onHighlightClick?: (highlight: Highlight, position: { top: number; left: number }) => void;
   className?: string;
 }
 
@@ -28,6 +32,7 @@ export const PdfPage = React.memo(function PdfPage({
   width,
   height,
   scale = 1.0,
+  fitMode = "width",
   watermark,
   hasFullAccess = true,
   previewLimit = 10,
@@ -36,10 +41,14 @@ export const PdfPage = React.memo(function PdfPage({
   isActiveWindow = true,
   onPageRendered,
   onUnlockRequest,
+  onHighlightClick,
   className = "",
 }: PdfPageProps) {
+  const { highlights, isPanMode } = useReader();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const textLayerRef = useRef<HTMLDivElement>(null);
   const activeRenderTaskRef = useRef<any>(null);
   const hasRenderedRef = useRef<boolean>(false);
 
@@ -51,6 +60,106 @@ export const PdfPage = React.memo(function PdfPage({
   // Check if this page is beyond the allowed free preview limit
   const isLocked = !hasFullAccess && previewLimit && pageNumber > previewLimit;
 
+  // Apply highlight markers across text spans in textLayer
+  const applyPageHighlights = useCallback(() => {
+    const container = textLayerRef.current;
+    if (!container) return;
+
+    // Remove any previously inserted highlight markers without destroying text
+    const existingMarks = container.querySelectorAll(".readora-pdf-mark");
+    existingMarks.forEach((m) => {
+      const parent = m.parentNode;
+      if (parent) {
+        while (m.firstChild) {
+          parent.insertBefore(m.firstChild, m);
+        }
+        parent.removeChild(m);
+      }
+    });
+
+    const pageHighlights = highlights.filter((h) => h.page === pageNumber);
+    if (!pageHighlights.length) return;
+
+    const spans = Array.from(container.querySelectorAll("span"));
+    if (!spans.length) return;
+
+    for (const hl of pageHighlights) {
+      const targetText = hl.selectedText?.trim();
+      if (!targetText || targetText.length < 1) continue;
+
+      let matched = false;
+
+      // 1. Single-span exact or substring match
+      for (const span of spans) {
+        const spanText = span.textContent || "";
+        const idx = spanText.toLowerCase().indexOf(targetText.toLowerCase());
+        if (idx !== -1) {
+          const before = spanText.slice(0, idx);
+          const match = spanText.slice(idx, idx + targetText.length);
+          const after = spanText.slice(idx + targetText.length);
+
+          span.innerHTML = "";
+          if (before) span.appendChild(document.createTextNode(before));
+
+          const mark = document.createElement("mark");
+          mark.className = `readora-pdf-mark readora-mark-${hl.color || "yellow"}`;
+          mark.dataset.highlightId = hl.id;
+          mark.textContent = match;
+          mark.title = hl.note ? `Note: ${hl.note}` : "Highlighted text";
+          span.appendChild(mark);
+
+          if (after) span.appendChild(document.createTextNode(after));
+          matched = true;
+          break;
+        }
+      }
+
+      // 2. Multi-span match: phrase spans across adjacent spans
+      if (!matched) {
+        let accumulated = "";
+        const spanEntries: { span: HTMLSpanElement; start: number; end: number }[] = [];
+        for (const span of spans) {
+          const text = span.textContent || "";
+          const start = accumulated.length;
+          accumulated += text;
+          spanEntries.push({ span, start, end: accumulated.length });
+        }
+
+        const matchIdx = accumulated.toLowerCase().indexOf(targetText.toLowerCase());
+        if (matchIdx !== -1) {
+          const matchEnd = matchIdx + targetText.length;
+          for (const entry of spanEntries) {
+            if (entry.start < matchEnd && entry.end > matchIdx) {
+              entry.span.classList.add("readora-pdf-mark", `readora-mark-${hl.color || "yellow"}`);
+              entry.span.dataset.highlightId = hl.id;
+              entry.span.title = hl.note ? `Note: ${hl.note}` : "Highlighted text";
+            }
+          }
+        }
+      }
+    }
+  }, [highlights, pageNumber]);
+
+  // Click on existing highlight to open note/options
+  const handleTextLayerClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = (e.target as HTMLElement).closest(".readora-pdf-mark") as HTMLElement;
+      if (target && target.dataset.highlightId) {
+        const hlId = target.dataset.highlightId;
+        const hl = highlights.find((h) => h.id === hlId);
+        if (hl && onHighlightClick) {
+          e.stopPropagation();
+          const rect = target.getBoundingClientRect();
+          onHighlightClick(hl, {
+            top: rect.top,
+            left: rect.left + rect.width / 2,
+          });
+        }
+      }
+    },
+    [highlights, onHighlightClick]
+  );
+
   const renderPage = useCallback(
     async (signal?: AbortSignal) => {
       if (isLocked) {
@@ -60,7 +169,6 @@ export const PdfPage = React.memo(function PdfPage({
 
       if (!canvasRef.current || !containerRef.current) return;
 
-      // Only show prominent loading spinner on initial unrendered load
       if (!hasRenderedRef.current) {
         setLoading(true);
       }
@@ -100,20 +208,26 @@ export const PdfPage = React.memo(function PdfPage({
         const unscaledViewport = page.getViewport({ scale: 1.0 });
         const originalAspect = unscaledViewport.width / unscaledViewport.height;
 
-        // Container bounds allowing the page to fill the book leaf naturally
-        const targetWidth = width ? Math.max(width, 200) : Math.max(container.clientWidth, 240);
-        const targetHeight = height ? Math.max(height, 280) : Math.max(container.clientHeight, 340);
+        // Container bounds allowing the page to fill the reader naturally
+        const targetWidth = width ? Math.max(width, 200) : Math.max(container.clientWidth || 600, 240);
+        const targetHeight = height ? Math.max(height, 280) : Math.max(container.clientHeight || 800, 340);
 
-        // Fit page while strictly preserving the original PDF's aspect ratio
-        const fitScale = Math.min(
-          targetWidth / unscaledViewport.width,
-          targetHeight / unscaledViewport.height
-        );
+        // Fit scale based on fitMode
+        let fitScale: number;
+        if (fitMode === "width") {
+          fitScale = targetWidth / unscaledViewport.width;
+        } else {
+          fitScale = Math.min(
+            targetWidth / unscaledViewport.width,
+            targetHeight / unscaledViewport.height
+          );
+        }
         const effectiveFitScale = fitScale * scale;
 
         // High-DPI crisp Retina scaling (at least 2.0x for razor sharp typography)
         const dpr = typeof window !== "undefined" ? Math.max(window.devicePixelRatio || 1, 2.0) : 2.0;
         const viewport = page.getViewport({ scale: effectiveFitScale * dpr });
+        const cssViewport = page.getViewport({ scale: effectiveFitScale });
 
         const displayWidth = Math.floor(viewport.width / dpr);
         const displayHeight = Math.floor(viewport.height / dpr);
@@ -148,6 +262,27 @@ export const PdfPage = React.memo(function PdfPage({
           aspectRatio: originalAspect,
         });
 
+        // Render PDF.js TextLayer over the rendered canvas for selectable, highlightable text
+        const textLayerContainer = textLayerRef.current;
+        if (textLayerContainer && !signal?.aborted) {
+          textLayerContainer.innerHTML = "";
+          try {
+            const pdfjs = await import("pdfjs-dist");
+            const textContent = await page.getTextContent();
+            if (!signal?.aborted && textLayerRef.current) {
+              const textLayer = new (pdfjs as any).TextLayer({
+                textContentSource: textContent,
+                container: textLayerRef.current,
+                viewport: cssViewport,
+              });
+              await textLayer.render();
+              applyPageHighlights();
+            }
+          } catch (textErr: any) {
+            console.debug("TextLayer render notice (canvas unaffected):", textErr?.message);
+          }
+        }
+
         if (!signal?.aborted) {
           hasRenderedRef.current = true;
           setLoading(false);
@@ -167,8 +302,15 @@ export const PdfPage = React.memo(function PdfPage({
         }
       }
     },
-    [bookId, pageNumber, width, height, scale, isLocked, onPageRendered]
+    [bookId, pageNumber, width, height, scale, fitMode, isLocked, onPageRendered, applyPageHighlights]
   );
+
+  // Sync highlights whenever reader highlights state updates
+  useEffect(() => {
+    if (hasRenderedRef.current) {
+      applyPageHighlights();
+    }
+  }, [applyPageHighlights]);
 
   useEffect(() => {
     if (!isActiveWindow && hasRenderedRef.current) {
@@ -177,7 +319,6 @@ export const PdfPage = React.memo(function PdfPage({
     }
 
     const controller = pageCache.createAbortController(pageNumber);
-
     renderPage(controller.signal);
 
     return () => {
@@ -195,7 +336,12 @@ export const PdfPage = React.memo(function PdfPage({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full flex items-center justify-center relative overflow-hidden select-none ${className}`}
+      id={`pdf-page-${pageNumber}`}
+      data-page-number={pageNumber}
+      className={`w-full flex items-center justify-center relative overflow-visible ${className}`}
+      style={{
+        minHeight: cssSize ? `${cssSize.height}px` : "320px",
+      }}
     >
       {/* LOCKED PREVIEW OVERLAY */}
       {isLocked && (
@@ -249,21 +395,41 @@ export const PdfPage = React.memo(function PdfPage({
         </div>
       )}
 
-      {/* REAL HIGH-DPI PDF PAGE CANVAS */}
-      <canvas
-        ref={canvasRef}
-        className="pdf-page-canvas rounded-xs transition-opacity duration-300 block shadow-xs m-auto"
+      {/* CANVAS & TEXT LAYER WRAPPER: EXACT 1-TO-1 ALIGNMENT */}
+      <div
+        className="relative mx-auto"
         style={{
-          position: "relative",
-          margin: "auto",
-          width: cssSize ? `${cssSize.width}px` : "auto",
+          width: cssSize ? `${cssSize.width}px` : "100%",
           height: cssSize ? `${cssSize.height}px` : "auto",
-          maxWidth: "100%",
-          maxHeight: "100%",
-          objectFit: "contain",
           opacity: (!hasRenderedRef.current && loading) || isLocked ? 0 : 1,
+          transition: "opacity 150ms ease",
         }}
-      />
+      >
+        <canvas
+          ref={canvasRef}
+          className="pdf-page-canvas rounded-none border-none block shadow-none mx-auto"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+          }}
+        />
+
+        {/* Crisp selectable & highlightable PDF text layer overlay */}
+        {!isLocked && (
+          <div
+            ref={textLayerRef}
+            onClick={handleTextLayerClick}
+            className={`pdf-text-layer textLayer absolute inset-0 ${
+              isPanMode ? "pointer-events-none select-none" : "pointer-events-auto select-text"
+            }`}
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        )}
+      </div>
 
       {/* SUBTLE LICENSED USER WATERMARK OVERLAY */}
       {watermark && !isLocked && !loading && (

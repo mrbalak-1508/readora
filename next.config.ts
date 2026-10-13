@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Reload timestamp: 2026-10-12
 };
 
 export default nextConfig;

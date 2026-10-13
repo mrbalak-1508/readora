@@ -81,10 +81,10 @@ export function BookHero({ books }: BookHeroProps) {
   const bookCta = getBookCta(currentBook);
 
   // Responsive book carousel offsets to prevent mobile horizontal overflow
-  const backBookX = isSmallScreen ? 48 : 80;
-  const backBookY = isSmallScreen ? -16 : -25;
-  const midBookX = isSmallScreen ? 26 : 45;
-  const midBookY = isSmallScreen ? -8 : -12;
+  const backBookX = isSmallScreen ? 28 : 80;
+  const backBookY = isSmallScreen ? -12 : -25;
+  const midBookX = isSmallScreen ? 15 : 45;
+  const midBookY = isSmallScreen ? -6 : -12;
 
   return (
     <section className="relative overflow-hidden pt-4 pb-12 sm:pt-10 sm:pb-20">
@@ -102,10 +102,10 @@ export function BookHero({ books }: BookHeroProps) {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-light)] border border-[var(--accent-border)] text-[var(--primary)] text-xs font-bold tracking-wider uppercase"
+              className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[var(--accent-light)] border border-[var(--accent-border)] text-[var(--primary)] text-[11px] sm:text-xs font-bold tracking-wider uppercase max-w-full"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[var(--accent)] animate-spin-slow" />
-              <span>READORA DIGITAL LIBRARY</span>
+              <Sparkles className="w-3.5 h-3.5 text-[var(--accent)] animate-spin-slow shrink-0" />
+              <span className="truncate">READORA DIGITAL LIBRARY</span>
             </motion.div>
 
             {/* Headline: Sans-Serif + Serif Emphasis */}
@@ -113,7 +113,7 @@ export function BookHero({ books }: BookHeroProps) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold tracking-tight text-[var(--foreground)] leading-[1.15] sm:leading-[1.12]"
+              className="text-2xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold tracking-tight text-[var(--foreground)] leading-[1.18] sm:leading-[1.12] break-words"
             >
               <span className="block font-sans font-extrabold">Every story deserves</span>
               <span className="block font-editorial font-normal italic text-[var(--primary)] mt-1">
@@ -126,10 +126,10 @@ export function BookHero({ books }: BookHeroProps) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-sm sm:text-base md:text-lg text-[var(--muted)] max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed"
+              className="text-xs sm:text-base md:text-lg text-[var(--muted)] max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed break-words"
             >
               Discover thoughtfully curated books, read beautifully, and keep every story within
-              reach with 3D page immersion.
+              reach with distraction-free reading.
             </motion.p>
 
             {/* Primary & Secondary Action CTAs */}
@@ -137,21 +137,21 @@ export function BookHero({ books }: BookHeroProps) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-3.5 pt-1 sm:pt-2 w-full sm:w-auto"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-2.5 sm:gap-3.5 pt-1 sm:pt-2 w-full sm:w-auto"
             >
               <Link
                 href="/explore"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-sm hover:shadow-md active:scale-98"
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-all shadow-sm hover:shadow-md active:scale-98"
               >
-                <Compass className="w-4 h-4" />
+                <Compass className="w-4 h-4 shrink-0" />
                 <span>Explore Library</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </Link>
               <button
                 onClick={() => setIsHowItWorksOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] hover:border-[var(--primary)] transition-all shadow-xs cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] hover:border-[var(--primary)] transition-all shadow-xs cursor-pointer"
               >
-                <HelpCircle className="w-4 h-4 text-[var(--secondary)]" />
+                <HelpCircle className="w-4 h-4 text-[var(--secondary)] shrink-0" />
                 <span>How Readora Works</span>
               </button>
             </motion.div>
@@ -161,19 +161,19 @@ export function BookHero({ books }: BookHeroProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="pt-2 sm:pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-[var(--muted)]"
+              className="pt-2 sm:pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-3.5 sm:gap-x-5 gap-y-2 text-[11px] sm:text-xs text-[var(--muted)]"
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="w-2 h-2 rounded-full bg-[var(--soft-green)] shrink-0" />
-                <span>3D Page Turning</span>
+                <span>Fluid Reading Flow</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="w-2 h-2 rounded-full bg-[var(--secondary)] shrink-0" />
                 <span>Free Preview Mode</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0" />
-                <span>Auditory Immersion</span>
+                <span>Custom Typography</span>
               </div>
             </motion.div>
           </div>
@@ -307,23 +307,23 @@ export function BookHero({ books }: BookHeroProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 backdrop-blur-md"
+                  className="p-3 sm:p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 backdrop-blur-md"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-amber-500 text-xs font-semibold">
                       <Star className="w-3.5 h-3.5 fill-amber-500 shrink-0" />
                       <span>{currentBook?.rating?.toFixed(1) || "4.9"}</span>
-                      <span className="text-[var(--muted)] font-normal text-[11px] truncate">
+                      <span className="text-[var(--muted)] font-normal text-[11px] truncate max-w-[130px] sm:max-w-none">
                         • {currentBook?.categoryName}
                       </span>
                     </div>
                     <Link
                       href={`/books/${currentBook?.slug}`}
-                      className="font-bold text-sm text-[var(--foreground)] truncate block hover:text-[var(--primary)] transition-colors mt-0.5"
+                      className="font-bold text-xs sm:text-sm text-[var(--foreground)] truncate block hover:text-[var(--primary)] transition-colors mt-0.5"
                     >
                       {currentBook?.title}
                     </Link>
-                    <span className="text-xs text-[var(--muted)] truncate block">
+                    <span className="text-[11px] sm:text-xs text-[var(--muted)] truncate block">
                       by {currentBook?.author}
                     </span>
                   </div>
@@ -332,13 +332,13 @@ export function BookHero({ books }: BookHeroProps) {
                   <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border)]">
                     <Link
                       href={bookCta.href}
-                      className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs flex items-center justify-center gap-1.5"
+                      className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl bg-[var(--primary)] text-white text-[11px] sm:text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                     >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>{bookCta.text}</span>
+                      <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{bookCta.text}</span>
                     </Link>
 
-                    <div className="flex items-center gap-1 border-l border-[var(--border)] pl-2">
+                    <div className="flex items-center gap-1 border-l border-[var(--border)] pl-2 shrink-0">
                       <button
                         onClick={handlePrev}
                         className="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-subtle)] text-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer"

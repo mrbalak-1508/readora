@@ -8,34 +8,36 @@ import { Highlighter, FileText, Copy, Check } from "lucide-react";
 interface HighlightPopupProps {
   position: { top: number; left: number };
   selectedText: string;
+  pageNumber?: number;
   onClose: () => void;
 }
 
-export function HighlightPopup({ position, selectedText, onClose }: HighlightPopupProps) {
+export function HighlightPopup({ position, selectedText, pageNumber, onClose }: HighlightPopupProps) {
   const { addHighlight, theme } = useReader();
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<Highlight["color"]>("yellow");
   const [noteText, setNoteText] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const colors: { name: Highlight["color"]; bg: string }[] = [
-    { name: "yellow", bg: "bg-amber-400 hover:bg-amber-300" },
-    { name: "green", bg: "bg-emerald-400 hover:bg-emerald-300" },
-    { name: "pink", bg: "bg-pink-400 hover:bg-pink-300" },
-    { name: "blue", bg: "bg-sky-400 hover:bg-sky-300" },
-    { name: "purple", bg: "bg-purple-400 hover:bg-purple-300" },
+  const colors: { name: Highlight["color"]; bg: string; title: string }[] = [
+    { name: "yellow", bg: "bg-amber-400 hover:bg-amber-300 ring-amber-500", title: "Amber Yellow" },
+    { name: "green", bg: "bg-emerald-400 hover:bg-emerald-300 ring-emerald-500", title: "Emerald Green" },
+    { name: "pink", bg: "bg-pink-400 hover:bg-pink-300 ring-pink-500", title: "Rose Pink" },
+    { name: "blue", bg: "bg-sky-400 hover:bg-sky-300 ring-sky-500", title: "Sky Blue" },
+    { name: "purple", bg: "bg-purple-400 hover:bg-purple-300 ring-purple-500", title: "Royal Purple" },
   ];
 
   const handleHighlight = (color: Highlight["color"]) => {
-    addHighlight(selectedText, color);
+    addHighlight(selectedText, color, undefined, pageNumber);
     if (typeof window !== "undefined") {
       window.getSelection()?.removeAllRanges();
     }
     onClose();
   };
 
-  const handleSaveWithNote = (color: Highlight["color"] = "yellow") => {
+  const handleSaveWithNote = () => {
     if (noteText.trim()) {
-      addHighlight(selectedText, color, noteText.trim());
+      addHighlight(selectedText, selectedColor, noteText.trim(), pageNumber);
       if (typeof window !== "undefined") {
         window.getSelection()?.removeAllRanges();
       }
@@ -115,16 +117,34 @@ export function HighlightPopup({ position, selectedText, onClose }: HighlightPop
             className="w-full h-16 p-2 rounded-lg text-xs bg-[var(--bg-subtle)] border border-[var(--border-main)] outline-none text-[var(--text-main)] resize-none"
             autoFocus
           />
-          <div className="flex items-center justify-between">
+          {/* Color selector for note */}
+          <div className="flex items-center gap-1.5 py-1">
+            <span className="text-[10px] text-[var(--text-muted)] font-medium mr-1">Color:</span>
+            {colors.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => setSelectedColor(c.name)}
+                className={`w-3.5 h-3.5 rounded-full ${c.bg} transition-transform ${
+                  selectedColor === c.name ? "ring-2 scale-110 shadow-xs" : "opacity-60 hover:opacity-100"
+                }`}
+                title={c.title}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
             <button
+              type="button"
               onClick={() => setIsAddingNote(false)}
-              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
             >
               Cancel
             </button>
             <button
-              onClick={() => handleSaveWithNote("yellow")}
-              className="px-3 py-1 rounded-md bg-[var(--accent)] text-white text-[11px] font-medium hover:bg-[var(--accent-hover)]"
+              type="button"
+              onClick={handleSaveWithNote}
+              className="px-3 py-1 rounded-md bg-[var(--primary)] text-white text-[11px] font-medium hover:bg-[var(--primary-hover)] cursor-pointer shadow-xs"
             >
               Save Note
             </button>

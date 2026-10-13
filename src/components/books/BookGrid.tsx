@@ -23,10 +23,10 @@ export function BookGrid({
   }[columns];
 
   return (
-    <section className="mb-20">
+    <section className="mb-14 sm:mb-20">
       {title && (
-        <div className="mb-6">
-          <h2 className="font-editorial text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-main)]">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="font-editorial text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-[var(--text-main)]">
             {title}
           </h2>
           {subtitle && (
@@ -47,7 +47,7 @@ export function BookGrid({
           </p>
         </div>
       ) : (
-        <div className={`grid ${colClasses} gap-3.5 sm:gap-6`}>
+        <div className={`grid ${colClasses} gap-3 sm:gap-5 lg:gap-6`}>
           {books.map((book) => (
             <BookCard key={book.id} book={book} />
           ))}

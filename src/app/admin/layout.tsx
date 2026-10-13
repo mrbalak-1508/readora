@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard,
@@ -12,39 +12,76 @@ import {
   FolderTree,
   BarChart3,
   ArrowLeft,
-  Shield,
   ShieldAlert,
   Menu,
   X,
-  LogOut,
   ShoppingBag,
   CreditCard,
   Sparkles,
   Ticket,
   Sliders,
-  Cookie,
   Home,
   MessageSquare,
+  Edit3,
+  HardDrive,
+  TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
-import { showToastAlert, showConfirmAlert } from "@/lib/alerts";
+
+interface NavGroup {
+  group: string;
+  items: Array<{
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+  }>;
+}
 
 export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
 
-  const links = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Book Catalog", href: "/admin/books", icon: BookOpen },
-    { label: "Reader Reviews", href: "/admin/reviews", icon: MessageSquare },
-    { label: "Orders & Sales", href: "/admin/orders", icon: ShoppingBag },
-    { label: "Sales Dashboard", href: "/admin/sales", icon: BarChart3 },
-    { label: "Subscriptions", href: "/admin/subscriptions", icon: Sparkles },
-    { label: "Coupons", href: "/admin/coupons", icon: Ticket },
-    { label: "Homepage CMS", href: "/admin/homepage", icon: Home },
-    { label: "Categories", href: "/admin/categories", icon: FolderTree },
-    { label: "Users & Roles", href: "/admin/users", icon: Users },
-    { label: "Payment Settings", href: "/admin/settings/payments", icon: CreditCard },
-    { label: "Cookie Analytics", href: "/admin/privacy/cookies", icon: Cookie },
-    { label: "Site Settings", href: "/admin/settings", icon: Sliders },
+  const navSections: NavGroup[] = [
+    {
+      group: "Overview",
+      items: [{ label: "Dashboard", href: "/admin", icon: LayoutDashboard }],
+    },
+    {
+      group: "Catalog & Editorial",
+      items: [
+        { label: "Books Library", href: "/admin/books", icon: BookOpen },
+        { label: "Add New Volume", href: "/admin/books/new", icon: PlusCircle },
+        { label: "Written Books", href: "/admin/written-books", icon: Edit3 },
+        { label: "Categories & Authors", href: "/admin/categories", icon: FolderTree },
+        { label: "Upload Processing", href: "/admin/uploads", icon: Sparkles },
+      ],
+    },
+    {
+      group: "Commerce & Monetization",
+      items: [
+        { label: "Orders & Payments", href: "/admin/orders", icon: ShoppingBag },
+        { label: "Sales Intelligence", href: "/admin/sales", icon: TrendingUp },
+        { label: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
+        { label: "Coupons & Discounts", href: "/admin/coupons", icon: Ticket },
+      ],
+    },
+    {
+      group: "Readers & Community",
+      items: [
+        { label: "Reader Analytics", href: "/admin/analytics", icon: BarChart3 },
+        { label: "Users & Roles", href: "/admin/users", icon: Users },
+        { label: "Reader Reviews", href: "/admin/reviews", icon: MessageSquare },
+      ],
+    },
+    {
+      group: "Platform Governance",
+      items: [
+        { label: "Homepage CMS", href: "/admin/homepage", icon: Home },
+        { label: "Privacy & Consent", href: "/admin/privacy", icon: ShieldCheck },
+        { label: "Site Settings", href: "/admin/settings", icon: Sliders },
+        { label: "Storage & Health", href: "/admin/health", icon: HardDrive },
+      ],
+    },
   ];
 
   return (
@@ -58,13 +95,13 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] lg:static lg:w-64 shrink-0 border-r border-[var(--border)] bg-[var(--card)] p-5 flex flex-col justify-between transition-all overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] lg:static lg:w-64 shrink-0 border-r border-[var(--border)] bg-[var(--card)] p-4 sm:p-5 flex flex-col justify-between transition-transform ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
-        } duration-250 ease-in-out`}
+        } duration-200 ease-in-out lg:h-screen lg:sticky lg:top-0`}
       >
-        <div className="space-y-5">
+        <div className="space-y-4 overflow-y-auto pr-1">
           {/* Brand & Admin Badge */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-editorial text-2xl font-bold tracking-tight text-[var(--foreground)]">
@@ -74,8 +111,8 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
                   Admin
                 </span>
               </div>
-              <p className="text-xs text-[var(--muted)] mt-0.5 font-medium">
-                Operations & Platform Studio
+              <p className="text-[11px] text-[var(--muted)] mt-0.5 font-medium">
+                Operations &amp; Studio Console
               </p>
             </div>
 
@@ -90,47 +127,58 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
             )}
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1">
-            {links.map((link) => {
-              const Icon = link.icon;
-              const isActive =
-                link.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname === link.href ||
-                    (pathname.startsWith(link.href + "/") &&
-                      !links.some(
-                        (other) =>
-                          other.href !== link.href &&
-                          other.href.startsWith(link.href) &&
-                          (pathname === other.href || pathname.startsWith(other.href + "/"))
-                      ));
+          {/* Categorized Navigation Groups */}
+          <nav className="space-y-4 pt-1">
+            {navSections.map((section) => (
+              <div key={section.group} className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] px-3 block">
+                  {section.group}
+                </span>
 
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? "bg-[var(--primary)] text-white shadow-xs"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
+                <div className="space-y-0.5">
+                  {section.items.map((link) => {
+                    const Icon = link.icon;
+                    const isActive =
+                      link.href === "/admin"
+                        ? pathname === "/admin"
+                        : pathname === link.href || pathname.startsWith(link.href + "/");
+
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isActive
+                            ? "bg-[var(--primary)] text-white font-bold shadow-xs"
+                            : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{link.label}</span>
+                        </div>
+                        {link.badge && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-light)] text-[var(--primary)]">
+                            {link.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-[var(--border)] space-y-2 mt-4">
+        {/* Bottom Exit Bar */}
+        <div className="pt-3 border-t border-[var(--border)] mt-2 shrink-0">
           <Link
             href="/"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 shrink-0" />
             <span>Exit to Digital Library</span>
           </Link>
         </div>
@@ -140,9 +188,8 @@ export function AdminNav({ mobileOpen, onClose }: { mobileOpen?: boolean; onClos
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, isLoading, logout } = useAuth();
+  const { isAdmin, isLoading } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const router = useRouter();
 
   if (isLoading) {
     return (
@@ -178,16 +225,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--background)] text-[var(--foreground)]">
       {/* Mobile top bar */}
-      <div className="lg:hidden flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--card)]">
+      <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between p-3.5 border-b border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span className="font-editorial text-xl font-bold text-[var(--foreground)]">READORA</span>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--accent-light)] text-[var(--primary)]">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--primary)] border border-[var(--primary)]/20">
             Admin
           </span>
         </div>
         <button
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          className="p-2 rounded-lg border border-[var(--border)]"
+          className="p-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] cursor-pointer"
+          aria-label="Toggle admin navigation"
         >
           {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -196,8 +244,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar navigation */}
       <AdminNav mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
-      {/* Main Admin Content Canvas */}
-      <main className="flex-1 overflow-y-auto max-h-screen p-6 sm:p-10">{children}</main>
+      {/* Main Admin Content Canvas with lag-free fluid scrolling and responsive padding */}
+      <main className="flex-1 min-w-0 overflow-y-auto min-h-screen p-4 sm:p-6 lg:p-8">
+        {children}
+      </main>
     </div>
   );
 }

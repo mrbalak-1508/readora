@@ -34,15 +34,17 @@ export async function PUT(
     });
 
     // Log admin activity
-    await prisma.adminActivity.create({
-      data: {
-        adminId: admin.id,
-        action: "CATEGORY_UPDATE",
-        targetType: "CATEGORY",
-        targetId: updated.id,
-        details: JSON.stringify({ name: updated.name, slug: updated.slug }),
-      },
-    }).catch(() => {});
+    if ((prisma as any).adminActivity?.create) {
+      await (prisma as any).adminActivity.create({
+        data: {
+          adminId: admin.id,
+          action: "CATEGORY_UPDATE",
+          targetType: "CATEGORY",
+          targetId: updated.id,
+          details: JSON.stringify({ name: updated.name, slug: updated.slug }),
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, category: updated });
   } catch (error: any) {
@@ -82,15 +84,17 @@ export async function DELETE(
     await prisma.category.delete({ where: { id } });
 
     // Log admin activity
-    await prisma.adminActivity.create({
-      data: {
-        adminId: admin.id,
-        action: "CATEGORY_DELETE",
-        targetType: "CATEGORY",
-        targetId: id,
-        details: JSON.stringify({ name: category.name }),
-      },
-    }).catch(() => {});
+    if ((prisma as any).adminActivity?.create) {
+      await (prisma as any).adminActivity.create({
+        data: {
+          adminId: admin.id,
+          action: "CATEGORY_DELETE",
+          targetType: "CATEGORY",
+          targetId: id,
+          details: JSON.stringify({ name: category.name }),
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, message: "Category deleted successfully" });
   } catch (error: any) {

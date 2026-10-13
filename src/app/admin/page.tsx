@@ -44,6 +44,11 @@ interface AdminStats {
   draftBooks: number;
   archivedBooks: number;
   totalUsers: number;
+  totalReaders: number;
+  processingFailures: number;
+  sales: number;
+  subscriptionRevenue: number;
+  subscriptionsCount: number;
   totalReviews?: number;
   activeReaders: number;
   booksCompleted: number;
@@ -69,6 +74,21 @@ interface AdminStats {
     categoryName: string;
     createdAt: string;
     status: string;
+  }>;
+  recentlyUpdatedBooks: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    author: string;
+    categoryName: string;
+    coverPath?: string;
+    createdAt: string;
+    updatedAt: string;
+    status: string;
+    format: string;
+    accessType: string;
+    price: number;
+    pages: number;
   }>;
   recentActivities: Array<{
     id: string;
@@ -111,32 +131,60 @@ export default function AdminDashboardPage() {
 
   const statCards = [
     {
-      label: "Total Volumes",
+      label: "Total Books",
       value: stats ? stats.totalBooks.toString() : "...",
       icon: BookOpen,
-      sub: stats ? `${stats.publishedBooks} Published • ${stats.draftBooks} Draft` : "Prisma SQLite",
+      sub: stats ? `${stats.publishedBooks} Live • ${stats.draftBooks} Draft` : "Catalog inventory",
       color: "text-[var(--primary)]",
+      href: "/admin/books",
     },
     {
-      label: "Registered Users",
-      value: stats ? stats.totalUsers.toString() : "...",
+      label: "Published Books",
+      value: stats ? stats.publishedBooks.toString() : "...",
+      icon: CheckCircle,
+      sub: "Active in public catalog",
+      color: "text-emerald-600",
+      href: "/admin/books?status=PUBLISHED",
+    },
+    {
+      label: "Draft Books",
+      value: stats ? stats.draftBooks.toString() : "...",
+      icon: FileText,
+      sub: "In manuscript / draft",
+      color: "text-amber-600",
+      href: "/admin/books?status=DRAFT",
+    },
+    {
+      label: "Upload Failures",
+      value: stats ? stats.processingFailures.toString() : "0",
+      icon: ShieldCheck,
+      sub: stats && stats.processingFailures > 0 ? "Requires review" : "All pipelines healthy",
+      color: stats && stats.processingFailures > 0 ? "text-red-500" : "text-emerald-600",
+      href: "/admin/uploads",
+    },
+    {
+      label: "Total Readers",
+      value: stats ? stats.totalReaders.toString() : "...",
       icon: Users,
       sub: stats ? `${stats.activeReaders} actively reading` : "User directory",
       color: "text-blue-600",
+      href: "/admin/users",
     },
     {
-      label: "Active Readers",
-      value: stats ? stats.activeReaders.toString() : "...",
+      label: "Gross Book Sales",
+      value: stats ? `₹${stats.sales.toLocaleString("en-IN")}` : "...",
       icon: TrendingUp,
-      sub: "Sessions in progress",
+      sub: "Paid one-time purchases",
       color: "text-emerald-600",
+      href: "/admin/orders",
     },
     {
-      label: "Completions",
-      value: stats ? stats.booksCompleted.toString() : "...",
-      icon: CheckCircle,
-      sub: "100% finished reads",
-      color: "text-amber-600",
+      label: "Subscription Revenue",
+      value: stats ? `₹${stats.subscriptionRevenue.toLocaleString("en-IN")}` : "...",
+      icon: Sparkles,
+      sub: stats ? `${stats.subscriptionsCount} active subscribers` : "Recurring plans",
+      color: "text-indigo-600",
+      href: "/admin/subscriptions",
     },
     {
       label: "Reading Hours",
@@ -144,14 +192,7 @@ export default function AdminDashboardPage() {
       icon: Clock,
       sub: "Logged reader time",
       color: "text-purple-600",
-    },
-    {
-      label: "Reader Reviews",
-      value: stats?.totalReviews !== undefined ? stats.totalReviews.toString() : "...",
-      icon: MessageSquare,
-      sub: "Community feedback",
-      color: "text-amber-500",
-      href: "/admin/reviews",
+      href: "/admin/analytics",
     },
   ];
 
@@ -205,28 +246,28 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards (6 KPIs) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* Stats Cards (8 KPIs) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map((item, idx) => {
           const Icon = item.icon;
           const content = (
             <div
-              className={`bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 shadow-xs transition-all hover:shadow-md h-full ${
+              className={`bg-[var(--card)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs transition-all hover:shadow-md h-full flex flex-col justify-between ${
                 (item as any).href ? "hover:border-[var(--primary)] group cursor-pointer" : ""
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--muted)] group-hover:text-[var(--primary)] transition-colors">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] sm:text-xs font-bold text-[var(--muted)] group-hover:text-[var(--primary)] transition-colors truncate">
                   {item.label}
                 </span>
-                <div className={`p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] ${item.color}`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`p-1.5 sm:p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] shrink-0 ${item.color}`}>
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="font-editorial text-3xl font-bold text-[var(--foreground)] mt-3">
+              <div className="font-editorial text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] mt-2 sm:mt-3 truncate">
                 {item.value}
               </div>
-              <div className="text-[11px] text-[var(--muted)] mt-1 font-medium">{item.sub}</div>
+              <div className="text-[10px] sm:text-[11px] text-[var(--muted)] mt-1 font-medium truncate">{item.sub}</div>
             </div>
           );
 
@@ -241,14 +282,14 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Analytics Visualizations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Interactive 7-Day Trend Chart */}
-        <div className="lg:col-span-8 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+        <div className="lg:col-span-8 bg-[var(--card)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-[var(--primary)]" />
-                <h2 className="font-editorial text-lg font-bold text-[var(--foreground)]">
+                <BarChart2 className="w-4 h-4 text-[var(--primary)] shrink-0" />
+                <h2 className="font-editorial text-base sm:text-lg font-bold text-[var(--foreground)]">
                   7-Day Platform Velocity
                 </h2>
               </div>
@@ -260,7 +301,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-1.5 p-1 bg-[var(--background)] border border-[var(--border)] rounded-2xl text-xs font-semibold">
               <button
                 onClick={() => setActiveChartMetric("reads")}
-                className={`px-3 py-1 rounded-xl transition-all ${
+                className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
                   activeChartMetric === "reads"
                     ? "bg-[var(--primary)] text-white shadow-xs"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -270,7 +311,7 @@ export default function AdminDashboardPage() {
               </button>
               <button
                 onClick={() => setActiveChartMetric("users")}
-                className={`px-3 py-1 rounded-xl transition-all ${
+                className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
                   activeChartMetric === "users"
                     ? "bg-[var(--primary)] text-white shadow-xs"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -282,9 +323,9 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* SVG Bar / Curve Visualization */}
-          <div className="relative pt-6">
+          <div className="relative pt-4 sm:pt-6">
             {hoveredDay && (
-              <div className="absolute top-0 right-4 bg-[var(--foreground)] text-[var(--background)] px-3 py-1 rounded-xl text-xs font-mono shadow-md animate-in fade-in duration-100">
+              <div className="absolute top-0 right-2 sm:right-4 bg-[var(--foreground)] text-[var(--background)] px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-mono shadow-md animate-in fade-in duration-100">
                 {hoveredDay.day} ({hoveredDay.date}):{" "}
                 <span className="font-bold text-[var(--primary-hover)]">
                   {activeChartMetric === "reads" ? `${hoveredDay.reads} active reads` : `${hoveredDay.users} signups`}
@@ -292,7 +333,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            <div className="h-48 flex items-end gap-3 sm:gap-6 border-b border-[var(--border)] pb-2">
+            <div className="h-44 sm:h-48 flex items-end gap-2 sm:gap-6 border-b border-[var(--border)] pb-2 overflow-x-auto sm:overflow-x-visible">
               {stats?.trendDays?.map((d, i) => {
                 const val = activeChartMetric === "reads" ? d.reads : d.users;
                 const heightPercent = Math.max(12, Math.round((val / maxChartValue) * 100));
@@ -302,9 +343,9 @@ export default function AdminDashboardPage() {
                     key={i}
                     onMouseEnter={() => setHoveredDay(d)}
                     onMouseLeave={() => setHoveredDay(null)}
-                    className="flex-1 flex flex-col items-center gap-2 group cursor-pointer"
+                    className="flex-1 flex flex-col items-center gap-1.5 sm:gap-2 group cursor-pointer min-w-[28px]"
                   >
-                    <div className="w-full flex items-end justify-center h-40">
+                    <div className="w-full flex items-end justify-center h-36 sm:h-40">
                       <div
                         style={{ height: `${heightPercent}%` }}
                         className={`w-full max-w-[42px] rounded-t-xl transition-all duration-300 ${
@@ -314,7 +355,7 @@ export default function AdminDashboardPage() {
                         } shadow-xs`}
                       />
                     </div>
-                    <span className="text-[11px] font-bold text-[var(--muted)] group-hover:text-[var(--foreground)]">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[var(--muted)] group-hover:text-[var(--foreground)]">
                       {d.day}
                     </span>
                   </div>
@@ -322,7 +363,7 @@ export default function AdminDashboardPage() {
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-3 text-[11px] text-[var(--muted)]">
+            <div className="flex items-center justify-between pt-3 text-[10px] sm:text-[11px] text-[var(--muted)]">
               <span>7 Days Ago</span>
               <span className="font-semibold text-[var(--foreground)]">Peak: {maxChartValue} events</span>
               <span>Today</span>
@@ -331,7 +372,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Category & Catalog Distribution */}
-        <div className="lg:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+        <div className="lg:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xs space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FolderTree className="w-4 h-4 text-[var(--primary)]" />
@@ -478,6 +519,89 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Recently Updated Books Section */}
+        <div className="lg:col-span-8 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-editorial text-lg font-bold text-[var(--foreground)] flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[var(--primary)]" />
+                <span>Recently Updated Books</span>
+              </h2>
+              <p className="text-xs text-[var(--muted)]">
+                Latest manuscript revisions, format uploads, and publishing changes
+              </p>
+            </div>
+            <Link
+              href="/admin/books"
+              className="text-xs font-bold text-[var(--primary)] hover:underline flex items-center gap-1"
+            >
+              <span>View All Books</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-[var(--border)]">
+            {stats?.recentlyUpdatedBooks && stats.recentlyUpdatedBooks.length > 0 ? (
+              stats.recentlyUpdatedBooks.map((book) => (
+                <div
+                  key={book.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--background)] px-3 rounded-2xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-9 h-12 shrink-0 rounded-lg overflow-hidden bg-[var(--background)] border border-[var(--border)]">
+                      <Image
+                        src={book.coverPath || "/placeholder-cover.jpg"}
+                        alt={book.title}
+                        fill
+                        className="object-cover"
+                        sizes="36px"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-[var(--foreground)] truncate">
+                          {book.title}
+                        </span>
+                        <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--accent-light)] text-[var(--primary)]">
+                          {book.format}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[var(--muted)] truncate mt-0.5">
+                        {book.author} • Updated {new Date(book.updatedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                    <span
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                        book.status === "PUBLISHED"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {book.status}
+                    </span>
+                    <span className="text-[10px] font-medium text-[var(--muted)]">
+                      {book.accessType === "FREE" ? "Free" : `₹${book.price}`}
+                    </span>
+                    <Link
+                      href={`/read/${book.slug || book.id}?preview=true`}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--primary)] hover:underline px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)]"
+                      title="Open admin preview in reader"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-[var(--muted)] text-center py-4">No books updated recently.</p>
+            )}
           </div>
         </div>
 

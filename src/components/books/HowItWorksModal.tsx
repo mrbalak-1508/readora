@@ -35,8 +35,8 @@ export function HowItWorksModal({ isOpen, onClose }: HowItWorksModalProps) {
     {
       step: "04",
       icon: <BookOpen className="w-5 h-5 text-[var(--soft-blue)]" />,
-      title: "Immerse in 3D Realistic Reading",
-      description: "Turn pages with tactile 3D physics, gentle ambient paper audio, customizable typography, and warm themes.",
+      title: "Distraction-Free Digital Reading",
+      description: "Experience smooth continuous flow or paginated reading, customizable typography, eye-comfort palettes, and instant responsiveness.",
     },
     {
       step: "05",

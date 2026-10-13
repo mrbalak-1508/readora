@@ -126,22 +126,22 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
       </div>
 
       {/* Book Metadata Below Cover */}
-      <div className="mt-3 flex flex-col flex-1">
+      <div className="mt-2.5 sm:mt-3 flex flex-col flex-1 min-w-0">
         <Link
           href={`/books/${book.slug}`}
-          className="font-editorial font-bold text-sm text-[var(--foreground)] line-clamp-1 hover:text-[var(--primary)] transition-colors"
+          className="font-editorial font-bold text-xs sm:text-sm text-[var(--foreground)] line-clamp-1 hover:text-[var(--primary)] transition-colors break-words"
           title={book.title}
         >
           {book.title}
         </Link>
-        <p className="text-xs text-[var(--muted)] line-clamp-1 mt-0.5">
+        <p className="text-[11px] sm:text-xs text-[var(--muted)] truncate mt-0.5">
           {book.author}
         </p>
 
-        <div className="mt-1.5 flex items-center justify-between text-[11px] text-[var(--muted)]">
+        <div className="mt-1.5 flex items-center justify-between text-[10px] sm:text-[11px] text-[var(--muted)] gap-1.5 min-w-0">
           <span className="truncate">{book.categoryName}</span>
-          <div className="flex items-center gap-1 text-amber-500 font-semibold">
-            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+          <div className="flex items-center gap-1 text-amber-500 font-semibold shrink-0">
+            <Star className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
             <span>{book.rating.toFixed(1)}</span>
           </div>
         </div>

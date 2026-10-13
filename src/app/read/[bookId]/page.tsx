@@ -4,6 +4,7 @@ import { ReaderProvider } from "@/context/ReaderContext";
 import { ReaderView } from "@/components/reader/ReaderView";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
+import { checkBookEntitlement } from "@/lib/auth/entitlements";
 import { MOCK_BOOKS } from "@/lib/data/mockBooks";
 import { Book } from "@/lib/types";
 
@@ -39,79 +40,13 @@ export default async function ReadPage({ params }: PageProps) {
 
   try {
     const user = await getCurrentUser();
+    const entitlement = await checkBookEntitlement(bookId, user);
 
-    const dbBook = await prisma.book.findFirst({
-      where: {
-        OR: [{ id: bookId }, { slug: bookId }],
-      },
-      include: {
-        chapters: {
-          orderBy: { order: "asc" },
-        },
-      },
-    });
-
-    if (dbBook) {
-      // Determine server-side entitlement
-      if (dbBook.accessType === "FREE" || dbBook.price === 0) {
-        initialHasFullAccess = true;
-      } else if (user) {
-        if (user.role === "ADMIN") {
-          initialHasFullAccess = true;
-        } else {
-          // Check BookEntitlement
-          const entitlement = await prisma.bookEntitlement.findFirst({
-            where: {
-              userId: user.id,
-              active: true,
-              OR: [
-                { bookId: dbBook.id },
-                ...(dbBook.slug ? [{ bookId: dbBook.slug }] : []),
-              ],
-            },
-          });
-
-          if (entitlement) {
-            initialHasFullAccess = true;
-          } else {
-            // Check paid Order
-            const paidOrder = await prisma.order.findFirst({
-              where: {
-                userId: user.id,
-                status: "PAID",
-                items: {
-                  some: {
-                    OR: [
-                      { bookId: dbBook.id },
-                      ...(dbBook.slug ? [{ bookId: dbBook.slug }] : []),
-                    ],
-                  },
-                },
-              },
-            });
-
-            if (paidOrder) {
-              initialHasFullAccess = true;
-            } else {
-              // Check active subscription
-              const activeSub = await prisma.subscription.findFirst({
-                where: {
-                  userId: user.id,
-                  status: "ACTIVE",
-                  currentPeriodEnd: { gte: new Date() },
-                },
-              });
-
-              if (
-                activeSub &&
-                ["SUBSCRIPTION", "FREE_WITH_SUBSCRIPTION", "PREVIEW"].includes(dbBook.accessType)
-              ) {
-                initialHasFullAccess = true;
-              }
-            }
-          }
-        }
-      }
+    if (entitlement.book) {
+      const dbBook = entitlement.book;
+      initialHasFullAccess = entitlement.hasFullAccess;
+      const allowedPreviewChapters = entitlement.allowedPreviewChapters;
+      const isWritten = (dbBook.format || "").toUpperCase() === "WRITTEN";
 
       book = {
         ...dbBook,
@@ -134,13 +69,25 @@ export default async function ReadPage({ params }: PageProps) {
         previewType: dbBook.previewType as any,
         previewPages: initialHasFullAccess ? 0 : dbBook.previewPages,
         format: (dbBook.format || "interactive").toLowerCase() as any,
-        chapters: dbBook.chapters.map((ch) => ({
-          id: ch.id,
-          title: ch.title,
-          page: ch.page,
-          content: ch.content || undefined,
-        })),
-        tableOfContents: dbBook.chapters.map((ch) => ({
+        // SECURITY: Never deliver full content over the wire to unentitled users
+        chapters: dbBook.chapters.map((ch: any, idx: number) => {
+          let isAllowed = initialHasFullAccess;
+          if (!isAllowed) {
+            if (isWritten) {
+              isAllowed = idx < allowedPreviewChapters;
+            } else {
+              isAllowed = ch.page <= entitlement.allowedPreviewPages;
+            }
+          }
+          return {
+            id: ch.id,
+            title: ch.title,
+            page: ch.page,
+            previewAllowed: isAllowed,
+            content: isAllowed ? ch.content || undefined : undefined,
+          };
+        }),
+        tableOfContents: dbBook.chapters.map((ch: any) => ({
           title: ch.title,
           page: ch.page,
         })),

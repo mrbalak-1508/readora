@@ -72,25 +72,25 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
               </div>
 
               <Link href={`/books/${mainBook.slug}`}>
-                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--foreground)] hover:text-[var(--primary)] transition-colors leading-tight break-words">
+                <h3 className="font-editorial text-xl sm:text-2xl md:text-3xl font-bold text-[var(--foreground)] hover:text-[var(--primary)] transition-colors leading-tight break-words line-clamp-2 sm:line-clamp-none">
                   {mainBook.title}
                 </h3>
               </Link>
-              <p className="text-sm font-medium text-[var(--muted)] mt-1 truncate">
+              <p className="text-xs sm:text-sm font-medium text-[var(--muted)] mt-1 truncate">
                 by {mainBook.author}
               </p>
 
-              <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed mt-4 line-clamp-4 break-words">
+              <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed mt-3 sm:mt-4 line-clamp-3 sm:line-clamp-4 break-words">
                 {mainBook.description}
               </p>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-[var(--border)] flex flex-wrap items-center gap-2.5 sm:gap-3 w-full">
+            <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full">
               <Link
                 href={`/read/${mainBook.id}`}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs text-center"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs text-center whitespace-nowrap"
               >
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-4 h-4 shrink-0" />
                 <span>
                   {mainBook.accessType === "FREE"
                     ? "Read Free"
@@ -102,7 +102,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
 
               <Link
                 href={`/books/${mainBook.slug}`}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors text-center"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-[var(--border)] text-xs sm:text-sm font-bold text-[var(--foreground)] hover:bg-[var(--bg-subtle)] transition-colors text-center whitespace-nowrap"
               >
                 <span>Book Details</span>
               </Link>
@@ -111,24 +111,24 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
         </div>
 
         {/* Secondary Books Column */}
-        <div className="lg:col-span-4 flex flex-col justify-between gap-4">
+        <div className="lg:col-span-4 flex flex-col justify-between gap-3 sm:gap-4">
           {secondaryBooks.map((b) => (
             <Link
               key={b.id}
               href={`/books/${b.slug}`}
-              className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] transition-all flex items-center gap-4 group"
+              className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] transition-all flex items-center gap-3.5 sm:gap-4 group"
             >
-              <div className="relative w-16 aspect-[2/3] shrink-0 rounded-lg overflow-hidden book-cover-shadow book-spine">
+              <div className="relative w-14 sm:w-16 aspect-[2/3] shrink-0 rounded-lg overflow-hidden book-cover-shadow book-spine">
                 <Image src={b.coverUrl} alt={b.title} fill className="object-cover" sizes="64px" />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-bold text-[var(--secondary)] uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-[var(--secondary)] uppercase tracking-wider block truncate">
                   {b.categoryName}
                 </span>
-                <h4 className="font-editorial text-sm font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors truncate">
+                <h4 className="font-editorial text-xs sm:text-sm font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors truncate">
                   {b.title}
                 </h4>
-                <p className="text-xs text-[var(--muted)] truncate">{b.author}</p>
+                <p className="text-[11px] sm:text-xs text-[var(--muted)] truncate">{b.author}</p>
                 <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--muted)]">
                   <span className="font-semibold text-amber-500 flex items-center gap-0.5">
                     ★ {b.rating.toFixed(1)}

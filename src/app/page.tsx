@@ -17,7 +17,7 @@ import { Book } from "@/lib/types";
 export const metadata = {
   title: "READORA — Premium Digital Library & eBook Platform",
   description:
-    "Every story deserves a beautiful place to be read. Discover curated volumes, preview freely, and immerse yourself in 3D realistic reading.",
+    "Every story deserves a beautiful place to be read. Discover curated volumes, preview freely, and immerse yourself in distraction-free digital reading.",
 };
 
 async function getBooks(): Promise<Book[]> {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Sliders,
@@ -17,18 +17,18 @@ import {
   Bell,
   Save,
   CheckCircle,
-  Volume2,
-  VolumeX,
-  Play,
-  Music,
-  UploadCloud,
-  FileAudio,
-  Trash2,
-  Loader2,
   CheckCircle2,
+  Lock,
+  Type,
+  Square,
+  AlignJustify,
+  Printer,
+  Copy,
+  Download,
+  Shield,
+  FileText,
 } from "lucide-react";
 import { showToastAlert } from "@/lib/alerts";
-import { soundManager, SOUND_PROFILES, SoundProfile } from "@/lib/sound";
 
 type SettingsTab =
   | "general"
@@ -67,79 +67,16 @@ export default function AdminSettingsPage() {
   });
 
   const [reader, setReader] = useState({
-    default3DAnimation: true,
-    defaultSound: false,
-    defaultSpeed: "normal",
+    defaultPageMode: "scroll",
     defaultTheme: "paper",
+    defaultFont: "serif",
+    defaultFontSize: 18,
+    defaultLineHeight: 1.7,
     watermarkEnabled: true,
-    soundProfile: "parchment" as SoundProfile,
-    soundVolume: 0.8,
-    soundUrl: "",
+    allowCopy: false,
+    allowPrint: false,
+    allowDownload: false,
   });
-
-  const [testingSoundId, setTestingSoundId] = useState<string | null>(null);
-  const [uploadingSfx, setUploadingSfx] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [showUrlFallback, setShowUrlFallback] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Upload local audio file to server storage
-  const handleAudioUpload = async (file: File) => {
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("File size exceeds 10MB limit.");
-      showToastAlert({
-        title: "File Too Large",
-        text: "Please select an audio file under 10MB.",
-        icon: "error",
-      });
-      return;
-    }
-
-    setUploadingSfx(true);
-    setUploadError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/admin/settings/upload-sfx", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to upload audio file");
-      }
-
-      setReader((prev) => ({
-        ...prev,
-        soundProfile: "custom",
-        soundUrl: data.url,
-      }));
-
-      soundManager.setCustomAudioUrl(data.url);
-      soundManager.setSoundProfile("custom", false);
-
-      showToastAlert({
-        title: "Audio Uploaded!",
-        text: `Uploaded "${data.fileName}". Custom SFX is active.`,
-        icon: "success",
-      });
-    } catch (err: any) {
-      setUploadError(err?.message || "Failed to upload audio");
-      showToastAlert({
-        title: "Upload Failed",
-        text: err?.message || "Could not upload audio file.",
-        icon: "error",
-      });
-    } finally {
-      setUploadingSfx(false);
-    }
-  };
 
   // Load saved settings from server on mount
   React.useEffect(() => {
@@ -149,12 +86,15 @@ export default function AdminSettingsPage() {
         if (data?.settings) {
           setReader((prev) => ({
             ...prev,
-            default3DAnimation: data.settings.reader_default_3d ?? prev.default3DAnimation,
-            defaultSound: data.settings.reader_default_sound ?? prev.defaultSound,
+            defaultPageMode: data.settings.reader_default_page_mode ?? prev.defaultPageMode,
+            defaultTheme: data.settings.reader_default_theme ?? prev.defaultTheme,
+            defaultFont: data.settings.reader_default_font ?? prev.defaultFont,
+            defaultFontSize: data.settings.reader_default_font_size ?? prev.defaultFontSize,
+            defaultLineHeight: data.settings.reader_default_line_height ?? prev.defaultLineHeight,
             watermarkEnabled: data.settings.reader_watermark_enabled ?? prev.watermarkEnabled,
-            soundProfile: data.settings.reader_sound_profile ?? prev.soundProfile,
-            soundVolume: data.settings.reader_sound_volume ?? prev.soundVolume,
-            soundUrl: data.settings.reader_sound_url ?? prev.soundUrl,
+            allowCopy: data.settings.reader_allow_copy ?? prev.allowCopy,
+            allowPrint: data.settings.reader_allow_print ?? prev.allowPrint,
+            allowDownload: data.settings.reader_allow_download ?? prev.allowDownload,
           }));
         }
       })
@@ -163,7 +103,7 @@ export default function AdminSettingsPage() {
 
   const [seo, setSeo] = useState({
     metaTitle: "READORA — Premium Digital Library & eBook Platform",
-    metaDescription: "Every story deserves a beautiful place to be read. Discover curated volumes, preview freely, and immerse in 3D reading.",
+    metaDescription: "Every story deserves a beautiful place to be read. Discover curated volumes, preview freely, and immerse in modern distraction-free reading.",
     sitemapEnabled: true,
     robotsIndex: true,
   });
@@ -183,23 +123,19 @@ export default function AdminSettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reader_default_3d: reader.default3DAnimation,
-          reader_default_sound: reader.defaultSound,
+          reader_default_page_mode: reader.defaultPageMode,
+          reader_default_theme: reader.defaultTheme,
+          reader_default_font: reader.defaultFont,
+          reader_default_font_size: reader.defaultFontSize,
+          reader_default_line_height: reader.defaultLineHeight,
           reader_watermark_enabled: reader.watermarkEnabled,
-          reader_sound_profile: reader.soundProfile,
-          reader_sound_volume: reader.soundVolume,
-          reader_sound_url: reader.soundUrl,
+          reader_allow_copy: reader.allowCopy,
+          reader_allow_print: reader.allowPrint,
+          reader_allow_download: reader.allowDownload,
         }),
       });
 
-      // Update local client sound manager directly
-      soundManager.setSoundProfile(reader.soundProfile, false);
-      soundManager.setVolume(reader.soundVolume);
-      if (reader.soundUrl) {
-        soundManager.setCustomAudioUrl(reader.soundUrl);
-      }
-
-      showToastAlert({ title: "Settings Saved", text: "Global platform configuration and reader sound updated!", icon: "success" });
+      showToastAlert({ title: "Settings Saved", text: "Global platform configuration and reader options updated!", icon: "success" });
     } catch {
       showToastAlert({ title: "Save Error", text: "Could not persist settings to server.", icon: "error" });
     }
@@ -214,10 +150,9 @@ export default function AdminSettingsPage() {
     { id: "reader", label: "Reader Engine", icon: <Layers className="w-4 h-4" /> },
     { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4" />, link: "/admin/settings/payments" },
     { id: "subscriptions", label: "Subscriptions", icon: <Ticket className="w-4 h-4" />, link: "/admin/subscriptions" },
-    { id: "cookies", label: "Cookies & Consent", icon: <Cookie className="w-4 h-4" />, link: "/admin/privacy/cookies" },
-    { id: "privacy", label: "Privacy Governance", icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: "privacy", label: "Privacy & Cookie Consent", icon: <ShieldCheck className="w-4 h-4" />, link: "/admin/privacy" },
     { id: "seo", label: "SEO & OpenGraph", icon: <Search className="w-4 h-4" /> },
-    { id: "email", label: "Transactional Email", icon: <Mail className="w-4 h-4" /> },
+    { id: "email", label: "Transactional Email & SMTP", icon: <Mail className="w-4 h-4" />, link: "/admin/settings/email" },
     { id: "notifications", label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   ];
 
@@ -379,377 +314,321 @@ export default function AdminSettingsPage() {
           {activeTab === "reader" && (
             <div className="space-y-6">
               <div className="border-b border-[var(--border)] pb-3">
-                <h3 className="font-editorial text-xl font-bold text-[var(--foreground)]">
-                  Reader Engine & SFX Audio Controls
-                </h3>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-[var(--primary)]" />
+                  <h3 className="font-editorial text-xl font-bold text-[var(--foreground)]">
+                    Reader Engine & Typography Defaults
+                  </h3>
+                </div>
                 <p className="text-xs text-[var(--muted)] mt-0.5">
-                  Configure default physical reading immersion parameters and page turn sound effects.
+                  Configure default reading flow, typography, color themes, and content security (DRM) for all volumes.
                 </p>
               </div>
 
-              {/* Core Feature Toggles */}
-              <div className="space-y-3 text-xs">
-                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
-                  <div>
-                    <span className="font-bold text-[var(--foreground)] block">
-                      3D Page Animation Enabled by Default
-                    </span>
-                    <span className="text-[11px] text-[var(--muted)]">
-                      CSS 3D perspective and paper thickness transform
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={reader.default3DAnimation}
-                    onChange={(e) => setReader({ ...reader, default3DAnimation: e.target.checked })}
-                    className="w-4 h-4 accent-[var(--primary)]"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
-                  <div>
-                    <span className="font-bold text-[var(--foreground)] block">
-                      Page Sound Effects Enabled by Default
-                    </span>
-                    <span className="text-[11px] text-[var(--muted)]">
-                      Specification default: OFF until reader enables
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={reader.defaultSound}
-                    onChange={(e) => setReader({ ...reader, defaultSound: e.target.checked })}
-                    className="w-4 h-4 accent-[var(--primary)]"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
-                  <div>
-                    <span className="font-bold text-[var(--foreground)] block">
-                      Subtle Reader Watermark for Protected Content
-                    </span>
-                    <span className="text-[11px] text-[var(--muted)]">
-                      Displays &ldquo;Licensed to user@email.com&rdquo; on purchased volume pages
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={reader.watermarkEnabled}
-                    onChange={(e) => setReader({ ...reader, watermarkEnabled: e.target.checked })}
-                    className="w-4 h-4 accent-[var(--primary)]"
-                  />
-                </label>
-              </div>
-
-              {/* SFX SOUND PROFILE SELECTOR */}
-              <div className="p-4 sm:p-5 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Music className="w-4 h-4 text-[var(--primary)]" />
-                      <h4 className="font-bold text-sm text-[var(--foreground)]">
-                        Page Turn Sound Effect (SFX)
-                      </h4>
+              {/* Reading Layout & Flow */}
+              <div className="p-4 sm:p-5 rounded-3xl bg-[var(--background)] border border-[var(--border)] space-y-3">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[var(--primary)]" />
+                  <h4 className="font-bold text-xs sm:text-sm text-[var(--foreground)]">
+                    Default Reading Flow & Page Mode
+                  </h4>
+                </div>
+                <p className="text-[11px] text-[var(--muted)]">
+                  Choose how readers first experience books across desktop, tablet, and mobile browsers.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setReader({ ...reader, defaultPageMode: "scroll" })}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                      reader.defaultPageMode === "scroll"
+                        ? "bg-[var(--accent-light)] border-[var(--primary)] shadow-xs"
+                        : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--primary)]/40"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0 mt-0.5">
+                      <AlignJustify className="w-4 h-4" />
                     </div>
-                    <p className="text-[11px] text-[var(--muted)] mt-0.5">
-                      Select the organic acoustic timbre produced when users turn pages across the platform.
-                    </p>
-                  </div>
+                    <div>
+                      <div className="font-bold text-xs text-[var(--foreground)] flex items-center gap-2">
+                        <span>Continuous Scroll</span>
+                        {reader.defaultPageMode === "scroll" && (
+                          <span className="text-[10px] text-[var(--primary)] font-semibold">Active</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--muted)] mt-0.5 leading-relaxed">
+                        Fluid vertical reading flow. Recommended for mobile screens, responsive layouts, and modern eBooks.
+                      </p>
+                    </div>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      soundManager.setEnabled(true);
-                      soundManager.setVolume(reader.soundVolume);
-                      soundManager.playPageTurn(reader.soundProfile);
-                      setTestingSoundId(reader.soundProfile);
-                      setTimeout(() => setTestingSoundId(null), 600);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-[var(--primary)] text-white text-xs font-bold hover:bg-[var(--primary-hover)] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                    onClick={() => setReader({ ...reader, defaultPageMode: "paged" })}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                      reader.defaultPageMode === "paged"
+                        ? "bg-[var(--accent-light)] border-[var(--primary)] shadow-xs"
+                        : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--primary)]/40"
+                    }`}
                   >
-                    <Volume2 className="w-3.5 h-3.5" />
-                    <span>Test Current Sound</span>
+                    <div className="w-8 h-8 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0 mt-0.5">
+                      <Square className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-[var(--foreground)] flex items-center gap-2">
+                        <span>Paginated (Page-by-Page)</span>
+                        {reader.defaultPageMode === "paged" && (
+                          <span className="text-[10px] text-[var(--primary)] font-semibold">Active</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--muted)] mt-0.5 leading-relaxed">
+                        Step-through pagination with discrete screen turns. Perfect for PDFs, comics, and fixed-layout titles.
+                      </p>
+                    </div>
                   </button>
                 </div>
+              </div>
 
-                {/* Sound Profiles Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {SOUND_PROFILES.map((p) => {
-                    const isSelected = reader.soundProfile === p.id;
-                    const isPlayingThis = testingSoundId === p.id;
-
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => setReader({ ...reader, soundProfile: p.id })}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2 ${
-                          isSelected
-                            ? "bg-[var(--accent-light)] border-[var(--primary)] shadow-xs"
-                            : "bg-[var(--background)] border-[var(--border)] hover:border-[var(--primary)]/50"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs text-[var(--foreground)]">
-                                {p.name}
-                              </span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/10 opacity-70">
-                                {p.badge}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-[var(--muted)] mt-1 line-clamp-2 leading-relaxed">
-                              {p.id === "custom" && reader.soundUrl
-                                ? `Active file: ${reader.soundUrl.split("/").pop()}`
-                                : p.description}
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              soundManager.setEnabled(true);
-                              soundManager.setVolume(reader.soundVolume);
-                              soundManager.playPageTurn(p.id);
-                              setTestingSoundId(p.id);
-                              setTimeout(() => setTestingSoundId(null), 600);
-                            }}
-                            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                              isPlayingThis
-                                ? "bg-[var(--primary)] text-white scale-110"
-                                : "bg-black/5 dark:bg-white/10 hover:bg-[var(--primary)] hover:text-white text-current"
-                            }`}
-                            title={`Preview ${p.name}`}
-                          >
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1 border-t border-black/5 dark:border-white/5 text-[10px] text-[var(--muted)]">
-                          <span>{isSelected ? "Active Default" : "Click to select"}</span>
-                          <input
-                            type="radio"
-                            name="soundProfileRadio"
-                            checked={isSelected}
-                            onChange={() => setReader({ ...reader, soundProfile: p.id })}
-                            className="accent-[var(--primary)] cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Default Theme Palette */}
+              <div className="p-4 sm:p-5 rounded-3xl bg-[var(--background)] border border-[var(--border)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-xs sm:text-sm text-[var(--foreground)]">
+                      Default Canvas Theme
+                    </h4>
+                    <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                      The color palette applied when a reader opens any book before personal customization.
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[var(--primary)] uppercase bg-[var(--card)] px-2.5 py-1 rounded-lg border border-[var(--border)]">
+                    {reader.defaultTheme}
+                  </span>
                 </div>
 
-                {/* Custom SFX Audio Upload & Management */}
-                {reader.soundProfile === "custom" && (
-                  <div className="p-4 sm:p-5 rounded-3xl bg-[var(--background)] border border-[var(--border)] space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <FileAudio className="w-4 h-4 text-[var(--primary)]" />
-                          <h5 className="font-bold text-xs sm:text-sm text-[var(--foreground)]">
-                            Custom SFX Audio File
-                          </h5>
-                        </div>
-                        <p className="text-[11px] text-[var(--muted)] mt-0.5">
-                          Upload an audio sample directly from your computer (.mp3, .wav, .ogg, .m4a).
-                        </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+                  {[
+                    { id: "paper", label: "Pure Paper", bg: "#FFFFFF", text: "#1A1A1A", border: "#E2E8F0" },
+                    { id: "warm", label: "Warm Ivory", bg: "#FAF7F0", text: "#2A2521", border: "#E8E2D5" },
+                    { id: "sepia", label: "Vintage Sepia", bg: "#F4ECD8", text: "#433422", border: "#E0D3B8" },
+                    { id: "dark", label: "Slate Dark", bg: "#1E232A", text: "#E2E8F0", border: "#333D4B" },
+                    { id: "midnight", label: "Midnight OLED", bg: "#0D1117", text: "#C9D1D9", border: "#21262D" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setReader({ ...reader, defaultTheme: t.id })}
+                      className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-2 ${
+                        reader.defaultTheme === t.id
+                          ? "ring-2 ring-[var(--primary)] shadow-xs"
+                          : "hover:scale-[1.02]"
+                      }`}
+                      style={{ backgroundColor: t.bg, borderColor: t.border }}
+                    >
+                      <div className="w-full h-8 rounded-lg flex items-center justify-center font-bold text-xs" style={{ color: t.text }}>
+                        Aa
                       </div>
+                      <span className="text-[11px] font-bold truncate max-w-full" style={{ color: t.text }}>
+                        {t.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                      {reader.soundUrl && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soundManager.setEnabled(true);
-                              soundManager.setVolume(reader.soundVolume);
-                              soundManager.setCustomAudioUrl(reader.soundUrl);
-                              soundManager.playPageTurn("custom");
-                              setTestingSoundId("custom-preview");
-                              setTimeout(() => setTestingSoundId(null), 700);
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
-                              testingSoundId === "custom-preview"
-                                ? "bg-emerald-600 text-white scale-105"
-                                : "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]"
-                            }`}
-                            title="Play custom sound"
-                          >
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                            <span>{testingSoundId === "custom-preview" ? "Playing..." : "Test Audio"}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReader({ ...reader, soundUrl: "" });
-                              soundManager.setCustomAudioUrl("");
-                            }}
-                            className="p-1.5 rounded-xl border border-[var(--border)] hover:bg-red-500/10 hover:border-red-500/30 text-red-500 transition-colors cursor-pointer"
-                            title="Clear custom audio"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Hidden Native File Input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.weba"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleAudioUpload(file);
-                          e.target.value = "";
-                        }
-                      }}
-                      className="hidden"
-                    />
-
-                    {/* Drag & Drop Local Upload Zone */}
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDragOver(true);
-                      }}
-                      onDragLeave={() => setIsDragOver(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragOver(false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handleAudioUpload(file);
-                      }}
-                      onClick={() => !uploadingSfx && fileInputRef.current?.click()}
-                      className={`relative p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2.5 ${
-                        isDragOver
-                          ? "border-[var(--primary)] bg-[var(--primary)]/10 scale-[1.01]"
-                          : "border-[var(--border)] hover:border-[var(--primary)]/60 bg-[var(--card)] hover:bg-[var(--background)]"
+              {/* Default Typography Font */}
+              <div className="p-4 sm:p-5 rounded-3xl bg-[var(--background)] border border-[var(--border)] space-y-3">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-[var(--primary)]" />
+                  <h4 className="font-bold text-xs sm:text-sm text-[var(--foreground)]">
+                    Default Reading Typography
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {[
+                    { id: "serif", label: "Editorial Serif", sample: "Literary classic", style: "font-serif" },
+                    { id: "sans", label: "Modern Sans", sample: "Crisp legibility", style: "font-sans" },
+                    { id: "mono", label: "Monospace", sample: "Code & analytical", style: "font-mono" },
+                    { id: "dyslexic", label: "OpenDyslexic", sample: "Accessible focus", style: "tracking-wide" },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setReader({ ...reader, defaultFont: f.id })}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        reader.defaultFont === f.id
+                          ? "bg-[var(--accent-light)] border-[var(--primary)] shadow-xs"
+                          : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--primary)]/40"
                       }`}
                     >
-                      {uploadingSfx ? (
-                        <div className="flex flex-col items-center gap-2 py-2">
-                          <Loader2 className="w-8 h-8 text-[var(--primary)] animate-spin" />
-                          <span className="text-xs font-bold text-[var(--foreground)]">
-                            Uploading and processing audio...
-                          </span>
-                          <span className="text-[11px] text-[var(--muted)]">
-                            Saving directly to server storage
-                          </span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="w-12 h-12 rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shadow-inner">
-                            <UploadCloud className="w-6 h-6" />
-                          </div>
-
-                          <div>
-                            <span className="text-xs font-bold text-[var(--foreground)] block">
-                              Click to choose local audio file or drag & drop here
-                            </span>
-                            <span className="text-[11px] text-[var(--muted)] mt-0.5 block">
-                              Supports MP3, WAV, OGG, M4A, AAC (Max 10MB)
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            className="mt-1 px-4 py-1.5 rounded-xl bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold transition-colors cursor-pointer"
-                          >
-                            Browse from Computer
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {uploadError && (
-                      <p className="text-xs font-medium text-red-500 bg-red-500/10 px-3 py-2 rounded-xl border border-red-500/20">
-                        {uploadError}
-                      </p>
-                    )}
-
-                    {/* Active Uploaded File Card */}
-                    {reader.soundUrl && (
-                      <div className="p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-bold text-[var(--foreground)] truncate">
-                              {reader.soundUrl.split("/").pop()}
-                            </div>
-                            <div className="text-[10px] text-[var(--muted)] font-mono truncate">
-                              Path: {reader.soundUrl}
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-[11px] font-bold text-[var(--foreground)] transition-colors shrink-0 cursor-pointer"
-                        >
-                          Change File
-                        </button>
+                      <div className="font-bold text-xs text-[var(--foreground)]">{f.label}</div>
+                      <div className={`text-sm text-[var(--muted)] mt-1.5 truncate ${f.style}`}>
+                        {f.sample}
                       </div>
-                    )}
+                    </button>
+                  ))}
+                </div>
 
-                    {/* Secondary External URL Option */}
-                    <div className="pt-2 border-t border-[var(--border)]">
-                      <button
-                        type="button"
-                        onClick={() => setShowUrlFallback(!showUrlFallback)}
-                        className="text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--primary)] transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>{showUrlFallback ? "▼ Hide URL input" : "► Or enter external audio URL"}</span>
-                      </button>
-
-                      {showUrlFallback && (
-                        <div className="mt-2.5 space-y-1.5">
-                          <label className="block text-[11px] font-bold text-[var(--foreground)]">
-                            Direct Audio Link (CDN or External Web URL)
-                          </label>
-                          <input
-                            type="url"
-                            placeholder="https://example.com/audio/page-turn.mp3"
-                            value={reader.soundUrl}
-                            onChange={(e) => setReader({ ...reader, soundUrl: e.target.value })}
-                            className="w-full px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs outline-none font-mono"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Default Volume Slider */}
-                <div className="pt-2 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                {/* Typography Scale Controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[var(--border)]">
                   <div>
-                    <span className="font-bold text-[var(--foreground)] block">
-                      Default SFX Volume ({Math.round(reader.soundVolume * 100)}%)
-                    </span>
-                    <span className="text-[11px] text-[var(--muted)]">
-                      Initial volume level applied when users activate sound effects.
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <VolumeX className="w-3.5 h-3.5 text-[var(--muted)]" />
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-bold text-[var(--foreground)]">Default Font Size</span>
+                      <span className="font-mono text-[var(--primary)] font-bold">{reader.defaultFontSize}px</span>
+                    </div>
                     <input
                       type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={reader.soundVolume}
-                      onChange={(e) => setReader({ ...reader, soundVolume: parseFloat(e.target.value) })}
-                      className="w-32 sm:w-40 accent-[var(--primary)] h-1.5 rounded-lg cursor-pointer"
+                      min={14}
+                      max={26}
+                      step={1}
+                      value={reader.defaultFontSize}
+                      onChange={(e) => setReader({ ...reader, defaultFontSize: parseInt(e.target.value) || 18 })}
+                      className="w-full accent-[var(--primary)] h-1.5 rounded-lg cursor-pointer"
                     />
-                    <Volume2 className="w-4 h-4 text-[var(--primary)]" />
+                    <div className="flex justify-between text-[10px] text-[var(--muted)] mt-1">
+                      <span>14px (Compact)</span>
+                      <span>18px (Standard)</span>
+                      <span>26px (Large)</span>
+                    </div>
                   </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-bold text-[var(--foreground)]">Default Line Spacing</span>
+                      <span className="font-mono text-[var(--primary)] font-bold">{reader.defaultLineHeight}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1.3}
+                      max={2.2}
+                      step={0.1}
+                      value={reader.defaultLineHeight}
+                      onChange={(e) => setReader({ ...reader, defaultLineHeight: parseFloat(e.target.value) || 1.7 })}
+                      className="w-full accent-[var(--primary)] h-1.5 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-[var(--muted)] mt-1">
+                      <span>1.3 (Tight)</span>
+                      <span>1.7 (Optimal)</span>
+                      <span>2.2 (Spacious)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DRM & Content Security Governance */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                  <Shield className="w-4 h-4 text-[var(--primary)]" />
+                  <h4 className="font-bold text-xs sm:text-sm text-[var(--foreground)]">
+                    Copyright Protection & DRM Security
+                  </h4>
+                </div>
+
+                <div className="space-y-2.5 text-xs">
+                  <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-[var(--foreground)] block">
+                          Dynamic Reader Identity Watermark
+                        </span>
+                        <span className="text-[11px] text-[var(--muted)]">
+                          Overlays subtle purchaser identity and license ID across volume canvases to prevent piracy leaks
+                        </span>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reader.watermarkEnabled}
+                      onChange={(e) => setReader({ ...reader, watermarkEnabled: e.target.checked })}
+                      className="w-4 h-4 accent-[var(--primary)]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
+                        <Copy className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-[var(--foreground)] block">
+                          Allow Direct Text Clipboard Copying
+                        </span>
+                        <span className="text-[11px] text-[var(--muted)]">
+                          Disabled by default. When off, prevents bulk scrapers and users from copying protected manuscript text
+                        </span>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reader.allowCopy}
+                      onChange={(e) => setReader({ ...reader, allowCopy: e.target.checked })}
+                      className="w-4 h-4 accent-[var(--primary)]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                        <Printer className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-[var(--foreground)] block">
+                          Allow Browser Printing (Ctrl+P / Command+P)
+                        </span>
+                        <span className="text-[11px] text-[var(--muted)]">
+                          Disabled by default. Intercepts print style sheets to protect publisher intellectual property
+                        </span>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reader.allowPrint}
+                      onChange={(e) => setReader({ ...reader, allowPrint: e.target.checked })}
+                      className="w-4 h-4 accent-[var(--primary)]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)]/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                        <Download className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-[var(--foreground)] block">
+                          Allow Direct Raw File Download
+                        </span>
+                        <span className="text-[11px] text-[var(--muted)]">
+                          Keep disabled to enforce reading within the Readora secure reader interface only
+                        </span>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={reader.allowDownload}
+                      onChange={(e) => setReader({ ...reader, allowDownload: e.target.checked })}
+                      className="w-4 h-4 accent-[var(--primary)]"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Active Format Engines Status Card */}
+              <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span className="font-bold text-[var(--foreground)]">Reader Engine Pipeline Active</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                    Supporting Written Chapters (Instant DOM), PDF Documents (PDF.js Vector Canvas), and EPUB eBooks (EPUB.js Flow).
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-bold text-[10px]">Written DOM</span>
+                  <span className="px-2 py-1 rounded-md bg-sky-500/10 text-sky-600 font-bold text-[10px]">PDF.js</span>
+                  <span className="px-2 py-1 rounded-md bg-purple-500/10 text-purple-600 font-bold text-[10px]">EPUB.js</span>
                 </div>
               </div>
             </div>

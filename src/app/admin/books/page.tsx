@@ -19,6 +19,11 @@ import {
   Check,
   BookOpen,
   MessageSquare,
+  Upload,
+  FileUp,
+  Image as ImageIcon,
+  Undo2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { showSuccessAlert, showErrorAlert, showConfirmAlert, showToastAlert } from "@/lib/alerts";
 
@@ -57,6 +62,12 @@ export default function AdminBooksPage() {
 
   // Edit modal state
   const [editingBook, setEditingBook] = useState<BookData | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editCoverPreviewUrl, setEditCoverPreviewUrl] = useState<string>("");
+  const [editCoverUrlInput, setEditCoverUrlInput] = useState<string>("");
+  const [coverImageError, setCoverImageError] = useState(false);
+  const [isDragOverCover, setIsDragOverCover] = useState(false);
+  const editCoverInputRef = React.useRef<HTMLInputElement>(null);
   const [editForm, setEditForm] = useState({
     title: "",
     author: "",
@@ -73,6 +84,43 @@ export default function AdminBooksPage() {
     sampleContent: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Replace file versioning state
+  const [replacingBook, setReplacingBook] = useState<BookData | null>(null);
+  const [replaceFile, setReplaceFile] = useState<File | null>(null);
+  const [replaceSummary, setReplaceSummary] = useState("");
+  const [savingReplace, setSavingReplace] = useState(false);
+
+  const handleReplaceFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replacingBook || !replaceFile) return;
+    setSavingReplace(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", replaceFile);
+      if (replaceSummary) formData.append("changeSummary", replaceSummary);
+
+      const res = await fetch(`/api/admin/books/${replacingBook.id}/replace-file`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showSuccessAlert("Asset Versioned & Replaced", data.message);
+        setReplacingBook(null);
+        setReplaceFile(null);
+        setReplaceSummary("");
+        fetchBooks();
+      } else {
+        showErrorAlert(data.error || "Failed to replace file");
+      }
+    } catch (err: any) {
+      showErrorAlert("Error", err.message);
+    } finally {
+      setSavingReplace(false);
+    }
+  };
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -194,6 +242,12 @@ export default function AdminBooksPage() {
 
   const openEditModal = (book: BookData) => {
     setEditingBook(book);
+    const initialCover = book.coverUrl || book.coverPath || "";
+    setEditCoverFile(null);
+    setEditCoverPreviewUrl(initialCover);
+    setEditCoverUrlInput(initialCover);
+    setCoverImageError(false);
+    setIsDragOverCover(false);
     setEditForm({
       title: book.title,
       author: book.author,
@@ -211,16 +265,67 @@ export default function AdminBooksPage() {
     });
   };
 
+  const handleCoverSelect = (file: File) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      showErrorAlert("Invalid Artwork", "Please upload a valid JPG, PNG, or WebP cover image.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showErrorAlert("Cover Too Large", "Cover artwork must be under 10MB.");
+      return;
+    }
+    setEditCoverFile(file);
+    setCoverImageError(false);
+    const preview = URL.createObjectURL(file);
+    setEditCoverPreviewUrl(preview);
+  };
+
+  const handleResetCover = () => {
+    setEditCoverFile(null);
+    setCoverImageError(false);
+    const originalCover = editingBook?.coverUrl || editingBook?.coverPath || "";
+    setEditCoverPreviewUrl(originalCover);
+    setEditCoverUrlInput(originalCover);
+    if (editCoverInputRef.current) {
+      editCoverInputRef.current.value = "";
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBook) return;
 
     setSavingEdit(true);
     try {
+      let finalCoverPath = editCoverUrlInput.trim() || undefined;
+
+      // If user selected a new cover file, upload it first to obtain permanent storage path
+      if (editCoverFile) {
+        const coverData = new FormData();
+        coverData.append("file", editCoverFile);
+        const coverRes = await fetch("/api/admin/books/upload-cover", {
+          method: "POST",
+          body: coverData,
+        });
+
+        if (!coverRes.ok) {
+          const errData = await coverRes.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to upload new cover image");
+        }
+
+        const coverJson = await coverRes.json();
+        finalCoverPath = coverJson.filePath || coverJson.url;
+      }
+
+      const payload = {
+        ...editForm,
+        ...(finalCoverPath && { coverPath: finalCoverPath, coverUrl: finalCoverPath }),
+      };
+
       const res = await fetch(`/api/books/${editingBook.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -228,8 +333,9 @@ export default function AdminBooksPage() {
         throw new Error(data.error || "Failed to update book metadata");
       }
 
-      showSuccessAlert("Book Updated", `Saved metadata for "${editForm.title}"`);
+      showSuccessAlert("Book Updated", `Saved metadata & cover artwork for "${editForm.title}"`);
       setEditingBook(null);
+      setEditCoverFile(null);
       await fetchBooks();
     } catch (err: any) {
       showErrorAlert("Update Failed", err.message || "Could not save metadata");
@@ -294,14 +400,14 @@ export default function AdminBooksPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+        <div className="flex items-center gap-1.5 p-1 bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-x-auto no-scrollbar">
           {["ALL", "PUBLISHED", "DRAFT", "ARCHIVED"].map((st) => (
             <button
               key={st}
               onClick={() => setSelectedStatus(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 selectedStatus === st
                   ? "bg-[var(--primary)] text-white shadow-xs"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -312,12 +418,12 @@ export default function AdminBooksPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
           {/* Category Dropdown */}
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] outline-none focus:border-[var(--primary)] cursor-pointer"
+            className="px-3 py-2 rounded-xl text-xs bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] outline-none focus:border-[var(--primary)] cursor-pointer w-full sm:w-auto"
           >
             <option value="ALL">All Categories</option>
             {categories.map((c) => (
@@ -328,7 +434,7 @@ export default function AdminBooksPage() {
           </select>
 
           {/* Search Box */}
-          <div className="relative min-w-[220px]">
+          <div className="relative w-full sm:min-w-[220px]">
             <Search className="w-4 h-4 text-[var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -459,20 +565,34 @@ export default function AdminBooksPage() {
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Link
-                            href={`/admin/reviews?bookId=${book.id}`}
-                            className="p-2 rounded-xl text-[var(--muted)] hover:text-amber-600 hover:bg-[var(--background)] transition-colors"
-                            title="Inspect Reviews for this Volume"
+                            href={`/read/${book.slug || book.id}?preview=true`}
+                            className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--background)] transition-colors"
+                            title="Admin Preview in Reader"
                           >
-                            <MessageSquare className="w-4 h-4" />
+                            <Eye className="w-4 h-4 text-amber-500" />
                           </Link>
 
-                          <Link
-                            href={`/books/${book.slug}`}
-                            className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
-                            title="View Public Page"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
+                          {book.format === "WRITTEN" ? (
+                            <Link
+                              href={`/admin/written-books/${book.id}`}
+                              className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--background)] transition-colors"
+                              title="Open Tiptap Chapter Desk"
+                            >
+                              <Edit3 className="w-4 h-4 text-emerald-600" />
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setReplacingBook(book);
+                                setReplaceFile(null);
+                                setReplaceSummary("");
+                              }}
+                              className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--background)] transition-colors"
+                              title="Replace Manuscript File (Creates New Version)"
+                            >
+                              <FileUp className="w-4 h-4 text-blue-500" />
+                            </button>
+                          )}
 
                           <button
                             onClick={() => openEditModal(book)}
@@ -527,6 +647,179 @@ export default function AdminBooksPage() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
+              {/* Cover Artwork Upload & Management Section */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--background)] border border-[var(--border)] space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-xl bg-[var(--accent-light)] text-[var(--primary)] shadow-xs">
+                      <ImageIcon className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-[var(--foreground)]">
+                        Cover Artwork & Presentation
+                      </h4>
+                      <p className="text-[11px] text-[var(--muted)]">
+                        Upload or replace front cover artwork for this volume
+                      </p>
+                    </div>
+                  </div>
+
+                  {editCoverFile && (
+                    <button
+                      type="button"
+                      onClick={handleResetCover}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 transition-colors"
+                      title="Revert back to current saved book cover"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span>Revert Cover</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  {/* Preview Thumbnail Column */}
+                  <div className="sm:col-span-4 flex flex-col items-center justify-center gap-1.5">
+                    <div className="relative w-28 h-40 rounded-xl overflow-hidden shadow-md border border-[var(--border)] bg-[var(--card)] group">
+                      {editCoverPreviewUrl && !coverImageError ? (
+                        <Image
+                          src={editCoverPreviewUrl}
+                          alt="Cover preview"
+                          fill
+                          className="object-cover transition-transform group-hover:scale-105 duration-300"
+                          sizes="112px"
+                          onError={() => setCoverImageError(true)}
+                          unoptimized={
+                            editCoverPreviewUrl.startsWith("blob:") ||
+                            editCoverPreviewUrl.startsWith("data:")
+                          }
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-2.5 text-center bg-linear-to-b from-amber-500/10 via-amber-500/5 to-transparent text-[var(--muted)]">
+                          <BookOpen className="w-7 h-7 text-[var(--primary)] opacity-60 mb-1.5" />
+                          <span className="text-[10px] font-bold text-[var(--foreground)] line-clamp-2 leading-tight">
+                            {editForm.title || "No Cover"}
+                          </span>
+                          <span className="text-[9px] text-[var(--muted)] line-clamp-1 mt-0.5">
+                            {editForm.author || "Curated"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Status indicator pill overlay */}
+                      <div className="absolute top-1.5 left-1.5 right-1.5">
+                        {editCoverFile ? (
+                          <span className="block px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-emerald-600 text-white shadow-xs text-center">
+                            New Upload
+                          </span>
+                        ) : (
+                          <span className="block px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-black/60 backdrop-blur-xs text-white/90 text-center">
+                            Current Cover
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {editCoverFile ? (
+                      <span
+                        className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate max-w-[150px] text-center"
+                        title={editCoverFile.name}
+                      >
+                        {editCoverFile.name} ({(editCoverFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-[var(--muted)] font-mono text-center">
+                        2:3 Portrait Ratio
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Upload Controls Column */}
+                  <div className="sm:col-span-8 space-y-3">
+                    {/* Drag and Drop Zone */}
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragOverCover(true);
+                      }}
+                      onDragLeave={() => setIsDragOverCover(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragOverCover(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handleCoverSelect(file);
+                      }}
+                      onClick={() => editCoverInputRef.current?.click()}
+                      className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition-all ${
+                        isDragOverCover
+                          ? "border-[var(--primary)] bg-[var(--accent-light)]/40 scale-[1.01]"
+                          : "border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--card)]/60"
+                      }`}
+                    >
+                      <input
+                        ref={editCoverInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleCoverSelect(file);
+                        }}
+                      />
+                      <div className="flex flex-col items-center justify-center gap-1.5">
+                        <div className="w-8 h-8 rounded-full bg-[var(--accent-light)] text-[var(--primary)] flex items-center justify-center">
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <div className="text-xs font-semibold text-[var(--foreground)]">
+                          {editCoverFile ? "Replace Selected Artwork" : "Click to Browse or Drag New Image Here"}
+                        </div>
+                        <p className="text-[10px] text-[var(--muted)]">
+                          Supports PNG, JPG, or WebP up to 10MB
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Or Direct Image Link */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-[var(--muted)] flex items-center gap-1">
+                          <LinkIcon className="w-3 h-3" />
+                          <span>Direct Cover Image URL</span>
+                        </label>
+                        {editCoverUrlInput &&
+                          editCoverUrlInput !==
+                            (editingBook?.coverUrl || editingBook?.coverPath || "") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const orig = editingBook?.coverUrl || editingBook?.coverPath || "";
+                                setEditCoverUrlInput(orig);
+                                if (!editCoverFile) setEditCoverPreviewUrl(orig);
+                              }}
+                              className="text-[10px] text-[var(--muted)] hover:text-[var(--foreground)] underline"
+                            >
+                              Reset URL
+                            </button>
+                          )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="https://images.unsplash.com/... or /covers/..."
+                        value={editCoverUrlInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditCoverUrlInput(val);
+                          if (!editCoverFile && val.trim()) {
+                            setEditCoverPreviewUrl(val.trim());
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 rounded-xl text-xs bg-[var(--card)] border border-[var(--border)] outline-none text-[var(--foreground)] focus:border-[var(--primary)] font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-[var(--foreground)] block mb-1">
@@ -752,6 +1045,87 @@ export default function AdminBooksPage() {
                       <span>Save Metadata</span>
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Replace Manuscript File Version Modal */}
+      {replacingBook && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center font-bold">
+                  <FileUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-base font-bold text-[var(--foreground)]">
+                    Replace Manuscript File
+                  </h3>
+                  <p className="text-xs text-[var(--muted)]">
+                    Creates a new asset version record for "{replacingBook.title}".
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReplacingBook(null)}
+                className="text-[var(--muted)] hover:text-[var(--foreground)] p-1.5 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleReplaceFile} className="space-y-4 text-xs">
+              <div className="p-4 rounded-2xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+                <div className="text-[11px] text-[var(--muted)]">
+                  Replacing the manuscript file will preserve all existing ratings, reviews, reader progress, and bookmarks. A <strong className="text-[var(--foreground)]">BookVersion</strong> entry will be archived automatically.
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[var(--foreground)] mb-1.5">
+                  Select New PDF or EPUB File *
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.epub,application/pdf,application/epub+zip"
+                  onChange={(e) => setReplaceFile(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-[var(--muted)] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--border)] file:text-xs file:font-bold file:bg-[var(--card)] file:text-[var(--foreground)] hover:file:bg-[var(--background)] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[var(--foreground)] mb-1.5">
+                  Version Change Summary / Release Note
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Corrected typo in chapter 3, updated layout typography"
+                  value={replaceSummary}
+                  onChange={(e) => setReplaceSummary(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-[var(--border)] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReplacingBook(null)}
+                  className="px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingReplace || !replaceFile}
+                  className="px-5 py-2 rounded-xl bg-[var(--primary)] text-white font-bold text-xs hover:bg-[var(--primary-hover)] transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {savingReplace && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Upload & Version File</span>
                 </button>
               </div>
             </form>
