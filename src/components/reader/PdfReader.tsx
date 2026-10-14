@@ -354,6 +354,11 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("#highlight-detail-card") || target.closest("a")) {
+      return;
+    }
+
     if (e.touches.length === 1 && (isPanMode || isSpacePanning)) {
       const touch = e.touches[0];
       const startX = touch.clientX;
@@ -509,7 +514,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
         ) : (
           /* Pure Document Stream: Centered when smaller, naturally left-anchored when wider */
           <div
-            className="flex flex-col items-center gap-3 sm:gap-6 pb-24 mx-auto w-max min-w-full transition-all duration-75"
+            className="flex flex-col items-center gap-3 sm:gap-6 pb-40 sm:pb-28 mx-auto w-max min-w-full transition-all duration-75"
             style={{
               width: `${Math.round(pageRenderWidth)}px`,
             }}
@@ -603,35 +608,37 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
       </div>
 
       {/* FLOATING ACTION TOOLBAR: ZOOM & MOVE / SELECT CONTROLS */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] shadow-xl p-1.5 rounded-full text-xs text-[var(--foreground)] animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] shadow-xl p-1 sm:p-1.5 rounded-full text-xs text-[var(--foreground)] animate-in fade-in slide-in-from-bottom-2 duration-200">
         {/* Crystal Clear Segmented Mode Toggle */}
         <div className="flex items-center p-0.5 bg-[var(--bg-subtle)] dark:bg-neutral-800/80 rounded-full border border-[var(--border)]">
           <button
             type="button"
             onClick={() => setIsPanMode(false)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer touch-manipulation ${
               !isPanMode
                 ? "bg-[var(--primary)] text-white shadow-xs"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
             title="Text Selection Mode: Drag over words to select, highlight, and add notes."
+            aria-label="Select Text"
           >
             <Highlighter className="w-3.5 h-3.5" />
-            <span>Select Text</span>
+            <span className="hidden sm:inline">Select Text</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsPanMode(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer touch-manipulation ${
               isPanMode
                 ? "bg-[var(--primary)] text-white shadow-xs"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
             title="Move Page Mode: Click and drag anywhere to pan/move the document."
+            aria-label="Move Page"
           >
             <Hand className="w-3.5 h-3.5" />
-            <span>Move Page</span>
+            <span className="hidden sm:inline">Move Page</span>
           </button>
         </div>
 
@@ -642,8 +649,9 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
           type="button"
           onClick={() => setZoom((z) => Math.max(0.7, +(z - 0.15).toFixed(2)))}
           disabled={zoom <= 0.7}
-          className="p-1.5 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--bg-subtle)] disabled:opacity-30 cursor-pointer"
+          className="p-1.5 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--bg-subtle)] disabled:opacity-30 cursor-pointer touch-manipulation"
           title="Zoom Out (-)"
+          aria-label="Zoom Out"
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
@@ -652,8 +660,9 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
         <button
           type="button"
           onClick={() => setZoom(1.0)}
-          className="font-mono text-[11px] font-bold px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--foreground)] cursor-pointer"
+          className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--foreground)] cursor-pointer touch-manipulation"
           title="Reset Zoom to 100%"
+          aria-label="Reset Zoom"
         >
           {Math.round(zoom * 100)}%
         </button>
@@ -663,8 +672,9 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
           type="button"
           onClick={() => setZoom((z) => Math.min(3.0, +(z + 0.15).toFixed(2)))}
           disabled={zoom >= 3.0}
-          className="p-1.5 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--bg-subtle)] disabled:opacity-30 cursor-pointer"
+          className="p-1.5 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--bg-subtle)] disabled:opacity-30 cursor-pointer touch-manipulation"
           title="Zoom In (+)"
+          aria-label="Zoom In"
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
@@ -672,8 +682,9 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
 
       {/* Floating Scroll-to-Top Action */}
       <button
+        type="button"
         onClick={() => scrollToPage(1, true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 p-2 rounded-xl bg-[var(--card)]/90 backdrop-blur-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] shadow-lg hover:shadow-xl transition-all cursor-pointer z-20 group"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-6 sm:right-6 p-2 sm:p-2.5 rounded-full bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] shadow-lg hover:shadow-xl transition-all cursor-pointer z-30 group touch-manipulation"
         title="Scroll to Top"
         aria-label="Scroll to Top"
       >

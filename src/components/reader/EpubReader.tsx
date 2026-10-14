@@ -220,7 +220,7 @@ export function EpubReader({ onUnlockRequest, onOpenToc }: EpubReaderProps) {
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[var(--background)] overflow-hidden relative select-none">
       {/* Main EPUB Viewport Canvas - Full Height */}
-      <div className="flex-1 relative overflow-y-auto flex items-center justify-center p-2 sm:p-6">
+      <div className="flex-1 relative overflow-y-auto flex items-center justify-center p-2 sm:p-6 pb-20 sm:pb-6">
         {loading && (
           <div className="text-center text-xs text-[var(--muted)] space-y-2 m-auto">
             <RefreshCw className="w-6 h-6 animate-spin text-[var(--primary)] mx-auto opacity-75" />

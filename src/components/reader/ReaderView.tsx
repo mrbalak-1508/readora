@@ -12,6 +12,7 @@ import { TableOfContentsSheet } from "./TableOfContentsSheet";
 import { WrittenReader } from "./WrittenReader";
 import { PdfReader } from "./PdfReader";
 import { EpubReader } from "./EpubReader";
+import { MobileReaderBar } from "./MobileReaderBar";
 
 export function ReaderView() {
   const {
@@ -147,6 +148,13 @@ export function ReaderView() {
           />
         )}
       </main>
+
+      {/* Mobile Reader Bottom Navigation Bar */}
+      <MobileReaderBar
+        onOpenToc={() => setIsTocOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onComplete={() => setIsCompletionOpen(true)}
+      />
 
       {/* Sheets & Modals */}
       <TableOfContentsSheet

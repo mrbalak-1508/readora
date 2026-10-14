@@ -227,7 +227,7 @@ export function WrittenReader({
     <div
       ref={containerRef}
       onMouseUp={handleMouseUp}
-      className={`flex-1 overflow-y-auto px-4 sm:px-8 py-8 sm:py-12 transition-colors duration-200 select-text ${fontClass}`}
+      className={`flex-1 overflow-y-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-36 sm:pb-16 transition-colors duration-200 select-text ${fontClass}`}
     >
       <div className="w-full max-w-3xl lg:max-w-4xl mx-auto space-y-8">
         {/* Chapter Header */}
@@ -317,11 +317,12 @@ export function WrittenReader({
         )}
 
         {/* Bottom Chapter Navigation Bar */}
-        <footer className="pt-8 border-t border-current/15 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 font-sans text-xs">
+        <footer className="pt-8 border-t border-current/15 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-sans text-xs">
           <button
+            type="button"
             onClick={handlePrev}
             disabled={currentChapterIndex === 0}
-            className="flex-1 py-3 px-4 rounded-2xl border border-current/20 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-start gap-2.5 cursor-pointer"
+            className="flex-1 py-3.5 px-4 rounded-2xl border border-current/20 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-25 disabled:pointer-events-none transition-all flex items-center justify-start gap-2.5 cursor-pointer touch-manipulation active:scale-[0.98] min-h-[50px]"
           >
             <ChevronLeft className="w-4 h-4 shrink-0" />
             <div className="text-left min-w-0">
@@ -335,16 +336,18 @@ export function WrittenReader({
           </button>
 
           <button
+            type="button"
             onClick={onOpenToc}
-            className="py-3 px-4 rounded-2xl border border-current/20 hover:bg-black/5 dark:hover:bg-white/5 transition-colors font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+            className="py-3.5 px-5 rounded-2xl border border-current/20 hover:bg-black/5 dark:hover:bg-white/5 transition-colors font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] min-h-[50px]"
           >
             <List className="w-4 h-4" />
             <span>Contents</span>
           </button>
 
           <button
+            type="button"
             onClick={handleNext}
-            className="flex-1 py-3 px-4 rounded-2xl bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] transition-all shadow-xs flex items-center justify-end gap-2.5 cursor-pointer"
+            className="flex-1 py-3.5 px-4 rounded-2xl bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] transition-all shadow-md flex items-center justify-end gap-2.5 cursor-pointer touch-manipulation active:scale-[0.98] min-h-[50px]"
           >
             <div className="text-right min-w-0">
               <div className="text-[10px] text-white/75 uppercase font-bold">
