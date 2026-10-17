@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js"],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./storage/**/*"],
+  },
   images: {
     remotePatterns: [
       {

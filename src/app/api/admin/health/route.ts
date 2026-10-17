@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/session";
-import { resolveSafeStoragePath } from "@/lib/storage";
+import { resolveSafeStoragePath, getStorageDirs } from "@/lib/storage";
 import fs from "fs/promises";
 import { existsSync, statSync } from "fs";
 import path from "path";
@@ -59,15 +59,25 @@ export async function GET() {
     }
 
     // 2. Storage System Inspection
-    const booksDir = path.resolve(process.cwd(), "storage", "books");
-    const coversDir = path.resolve(process.cwd(), "storage", "covers");
-    const avatarsDir = path.resolve(process.cwd(), "storage", "avatars");
+    const dirs = getStorageDirs();
 
-    const [booksStats, coversStats, avatarsStats] = await Promise.all([
-      getDirSize(booksDir),
-      getDirSize(coversDir),
-      getDirSize(avatarsDir),
+    const [booksRuntime, coversRuntime, avatarsRuntime, booksBundled, coversBundled] = await Promise.all([
+      getDirSize(dirs.books),
+      getDirSize(dirs.covers),
+      getDirSize(dirs.avatars),
+      dirs.root !== dirs.bundledRoot ? getDirSize(path.join(dirs.bundledRoot, "books")) : Promise.resolve({ size: 0, count: 0 }),
+      dirs.root !== dirs.bundledRoot ? getDirSize(path.join(dirs.bundledRoot, "covers")) : Promise.resolve({ size: 0, count: 0 }),
     ]);
+
+    const booksStats = {
+      size: booksRuntime.size + booksBundled.size,
+      count: booksRuntime.count + booksBundled.count,
+    };
+    const coversStats = {
+      size: coversRuntime.size + coversBundled.size,
+      count: coversRuntime.count + coversBundled.count,
+    };
+    const avatarsStats = avatarsRuntime;
 
     // 3. File Integrity Audit: Verify if all books with filePath exist in storage
     const allBooks = await prisma.book.findMany({

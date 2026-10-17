@@ -95,8 +95,8 @@ export async function PUT(
           const publicCoversDir = path.resolve(process.cwd(), "public", "covers");
           await fs.mkdir(publicCoversDir, { recursive: true });
           await fs.writeFile(path.join(publicCoversDir, saved.safeFileName), validation.file.buffer);
-        } catch (fsErr) {
-          console.warn("Could not copy cover to public/covers:", fsErr);
+        } catch {
+          // Non-fatal on read-only serverless filesystems
         }
       }
 

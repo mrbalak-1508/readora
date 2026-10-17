@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       await fs.mkdir(publicCoversDir, { recursive: true });
       const publicFilePath = path.join(publicCoversDir, saved.safeFileName);
       await fs.writeFile(publicFilePath, validation.file.buffer);
-    } catch (fsErr) {
-      console.warn("Could not write cover to public/covers:", fsErr);
+    } catch {
+      // Non-fatal on read-only environments like Vercel; served dynamically via /covers/[fileName]
     }
 
     const publicUrl = `/covers/${saved.safeFileName}`;

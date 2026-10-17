@@ -3,24 +3,61 @@ import fs from "fs/promises";
 import { existsSync, createReadStream } from "fs";
 import crypto from "crypto";
 
-const STORAGE_ROOT = path.resolve(
-  /*turbopackIgnore: true*/ path.join(process.cwd(), "storage")
-);
-const BOOKS_DIR = path.resolve(
-  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "books")
-);
-const COVERS_DIR = path.resolve(
-  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "covers")
-);
-const AVATARS_DIR = path.resolve(
-  /*turbopackIgnore: true*/ path.join(STORAGE_ROOT, "avatars")
+import os from "os";
+
+// Detect Vercel / AWS Lambda / Serverless read-only environment
+const IS_SERVERLESS = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT ||
+  (process.env.NODE_ENV === "production" && process.cwd().startsWith("/var/task"))
 );
 
-// Ensure local storage directories exist
+// Bundled storage directory (where static seeded books/covers live in repository)
+const BUNDLED_STORAGE_ROOT = path.resolve(
+  /*turbopackIgnore: true*/ path.join(process.cwd(), "storage")
+);
+
+// Writable storage directory:
+// On Vercel / AWS Lambda, /var/task is read-only, so runtime uploads MUST be written to /tmp
+let writableStorageRoot = IS_SERVERLESS
+  ? path.resolve(os.tmpdir(), "readora_storage")
+  : BUNDLED_STORAGE_ROOT;
+
+export function getActiveStorageRoot(): string {
+  return writableStorageRoot;
+}
+
+export function getStorageDirs() {
+  return {
+    root: writableStorageRoot,
+    bundledRoot: BUNDLED_STORAGE_ROOT,
+    books: path.join(writableStorageRoot, "books"),
+    covers: path.join(writableStorageRoot, "covers"),
+    avatars: path.join(writableStorageRoot, "avatars"),
+  };
+}
+
+// Ensure local storage directories exist safely
 export async function ensureStorageDirs() {
-  await fs.mkdir(BOOKS_DIR, { recursive: true });
-  await fs.mkdir(COVERS_DIR, { recursive: true });
-  await fs.mkdir(AVATARS_DIR, { recursive: true });
+  const dirs = getStorageDirs();
+  try {
+    await fs.mkdir(dirs.books, { recursive: true });
+    await fs.mkdir(dirs.covers, { recursive: true });
+    await fs.mkdir(dirs.avatars, { recursive: true });
+  } catch (err: any) {
+    // If writing to process.cwd() failed with EROFS / ENOENT / EACCES (common on serverless / Vercel)
+    if (writableStorageRoot !== path.resolve(os.tmpdir(), "readora_storage")) {
+      console.warn("Storage root is read-only. Switching writable root to /tmp/readora_storage:", err?.message);
+      writableStorageRoot = path.resolve(os.tmpdir(), "readora_storage");
+      const fallbackDirs = getStorageDirs();
+      await fs.mkdir(fallbackDirs.books, { recursive: true });
+      await fs.mkdir(fallbackDirs.covers, { recursive: true });
+      await fs.mkdir(fallbackDirs.avatars, { recursive: true });
+    } else {
+      throw err;
+    }
+  }
 }
 
 export const ALLOWED_BOOK_MIME_TYPES: Record<string, string> = {
@@ -75,8 +112,8 @@ export class LocalStorageProvider implements StorageProvider {
     subDir: "books" | "covers" | "avatars"
   ): Promise<StorageFileResult> {
     await ensureStorageDirs();
-    const targetDir =
-      subDir === "books" ? BOOKS_DIR : subDir === "covers" ? COVERS_DIR : AVATARS_DIR;
+    const dirs = getStorageDirs();
+    const targetDir = dirs[subDir];
     const uniqueId = crypto.randomUUID();
     const safeFileName = `${uniqueId}${file.extension}`;
     const absolutePath = path.join(targetDir, safeFileName);
@@ -202,8 +239,9 @@ export async function saveSecureFile(
 ): Promise<{ relativePath: string; absolutePath: string; safeFileName: string }> {
   await ensureStorageDirs();
   const res = await storageProvider.uploadFile(validated, subDir);
+  const dirs = getStorageDirs();
   const absolutePath = path.resolve(
-    /*turbopackIgnore: true*/ path.join(process.cwd(), "storage", subDir, res.fileName)
+    /*turbopackIgnore: true*/ path.join(dirs[subDir], res.fileName)
   );
   return { relativePath: res.storagePath, absolutePath, safeFileName: res.fileName };
 }
@@ -219,19 +257,35 @@ export function resolveSafeStoragePath(relativePath: string): string | null {
     .replace(/^[/\\]+/, "")
     .replace(/^storage[/\\]+/, "");
 
-  // Statically scoped to 'storage' with turbopackIgnore
-  const absolutePath = path.resolve(
-    /*turbopackIgnore: true*/ path.join(process.cwd(), "storage", cleanRelative)
-  );
-
-  // Path traversal prevention: MUST be inside STORAGE_ROOT
-  if (!absolutePath.startsWith(STORAGE_ROOT)) {
+  // Prevent directory traversal
+  const normalized = path.normalize(cleanRelative);
+  if (normalized.startsWith("..") || path.isAbsolute(normalized)) {
     return null;
   }
 
-  if (!existsSync(absolutePath)) {
-    return null;
+  const dirs = getStorageDirs();
+
+  // Search candidate locations in order:
+  // 1. Active writable storage root (e.g. /tmp/readora_storage or local storage)
+  // 2. Bundled repository storage (e.g. /var/task/storage or local storage)
+  // 3. Fallback OS tmp storage if different
+  // 4. Public directory fallback
+  const candidates = [
+    path.resolve(dirs.root, cleanRelative),
+    path.resolve(dirs.bundledRoot, cleanRelative),
+    path.resolve(os.tmpdir(), "readora_storage", cleanRelative),
+    path.resolve(process.cwd(), "public", cleanRelative),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // Ignore filesystem permission errors
+    }
   }
 
-  return absolutePath;
+  return null;
 }
