@@ -55,14 +55,14 @@ export function TrendingCarousel({ books }: TrendingCarouselProps) {
         </div>
       </div>
 
-      {/* Horizontal scrolling shelf */}
+      {/* Horizontal scrolling shelf with touch-pan-x for reliable mobile taps */}
       <div
         ref={scrollRef}
-        className="flex gap-3.5 sm:gap-6 overflow-x-auto pb-4 sm:pb-6 pt-2 scroll-smooth no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
-        style={{ scrollbarWidth: "none" }}
+        className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 sm:pb-6 pt-2 touch-pan-x no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory"
+        style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
       >
         {trendingBooks.map((book) => (
-          <div key={book.id} className="w-36 sm:w-48 md:w-52 shrink-0">
+          <div key={book.id} className="w-40 sm:w-48 md:w-52 shrink-0 snap-start">
             <BookCard book={book} />
           </div>
         ))}
