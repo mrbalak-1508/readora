@@ -39,16 +39,6 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
     }
   };
 
-  const handleCardCoverClick = (e: React.MouseEvent) => {
-    // If the click is on an interactive child button, ignore
-    const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest("[data-no-reader]")) {
-      return;
-    }
-    soundManager.playBookOpen();
-    router.push(`/read/${book.id}`);
-  };
-
   const getAccessBadge = () => {
     if (book.accessType === "FREE") {
       return { text: "Free", color: "bg-[#83B89F]/95 text-white shadow-xs" };
@@ -70,19 +60,15 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
   return (
     <div id="tour-book-card" className="group relative flex flex-col w-full select-none">
       {/* Book Cover Container: 1-Click Tap / Click Target */}
-      <div
-        onClick={handleCardCoverClick}
-        className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-[var(--bg-subtle)] book-cover-shadow book-spine transition-all duration-300 ease-out cursor-pointer active:scale-[0.98] sm:hover:-translate-y-1.5 touch-manipulation"
-      >
-        {/* Underlying Next.js Link for Instant Prefetching & SEO */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-[var(--bg-subtle)] book-cover-shadow book-spine transition-all duration-300 ease-out sm:hover:-translate-y-1.5 touch-manipulation">
+        {/* Full Cover Clickable Link: Single-click opens reader view */}
         <Link
           href={`/read/${book.id}`}
           prefetch={true}
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() => {
             soundManager.playBookOpen();
           }}
-          className="absolute inset-0 z-0 block"
+          className="absolute inset-0 z-0 block cursor-pointer active:opacity-95"
           aria-label={`Read "${book.title}"`}
           title={`Click to read "${book.title}"`}
         >
@@ -108,22 +94,25 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
           </div>
         )}
 
-        {/* Mobile View: Sleek Floating "Read" Pill (Guarantees user knows single tap opens reader) */}
-        <div className="sm:hidden absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold shadow-md flex items-center gap-1.5 backdrop-blur-md pointer-events-none z-10 animate-in fade-in duration-200">
-          <BookOpen className="w-3 h-3" />
+        {/* Mobile View: Dedicated Clickable "Read" Action Button */}
+        <Link
+          href={`/read/${book.id}`}
+          prefetch={true}
+          onClick={() => soundManager.playBookOpen()}
+          className="sm:hidden absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-bold shadow-lg flex items-center gap-1.5 backdrop-blur-md z-20 cursor-pointer active:scale-90 transition-all hover:bg-[var(--primary-hover)]"
+          aria-label={`Read "${book.title}"`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
           <span>Read</span>
-        </div>
+        </Link>
 
-        {/* Desktop Quick Action Buttons (Reveals on Hover, Never Blocks Mobile Taps) */}
-        <div className="hidden sm:flex absolute bottom-3 left-3 right-3 items-center justify-between gap-2 opacity-0 translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300 z-10 pointer-events-none sm:group-hover:pointer-events-auto">
+        {/* Desktop Quick Action Buttons (Reveals on Hover) */}
+        <div className="hidden sm:flex absolute bottom-3 left-3 right-3 items-center justify-between gap-2 opacity-0 translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300 z-20 pointer-events-none sm:group-hover:pointer-events-auto">
           <Link
             href={`/read/${book.id}`}
             prefetch={true}
-            onClick={(e) => {
-              e.stopPropagation();
-              soundManager.playBookOpen();
-            }}
-            className="flex-1 py-1.5 px-3 rounded-xl bg-[var(--primary)] text-xs font-bold text-white shadow-lg hover:bg-[var(--primary-hover)] flex items-center justify-center gap-1.5 backdrop-blur-sm transition-all"
+            onClick={() => soundManager.playBookOpen()}
+            className="flex-1 py-1.5 px-3 rounded-xl bg-[var(--primary)] text-xs font-bold text-white shadow-lg hover:bg-[var(--primary-hover)] flex items-center justify-center gap-1.5 backdrop-blur-sm transition-all cursor-pointer"
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Read</span>
@@ -131,9 +120,7 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
 
           <Link
             href={`/books/${book.slug}`}
-            data-no-reader="true"
-            onClick={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-xl bg-white/95 text-[var(--foreground)] hover:bg-white backdrop-blur-sm shadow-lg transition-all"
+            className="p-1.5 rounded-xl bg-white/95 text-[var(--foreground)] hover:bg-white backdrop-blur-sm shadow-lg transition-all cursor-pointer"
             title="View Synopsis & Reviews"
             aria-label="View Details"
           >

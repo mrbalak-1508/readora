@@ -1,8 +1,11 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Book } from "@/lib/types";
 import { BookOpen, Star, ArrowRight, Sparkles } from "lucide-react";
+import { soundManager } from "@/lib/sound";
 
 interface FeaturedSectionProps {
   books: Book[];
@@ -45,7 +48,8 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
           <Link
             href={`/read/${mainBook.id}`}
             prefetch={true}
-            className="relative w-44 sm:w-56 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden book-cover-shadow book-spine group cursor-pointer"
+            onClick={() => soundManager.playBookOpen()}
+            className="relative w-44 sm:w-56 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden book-cover-shadow book-spine group cursor-pointer active:scale-[0.98] transition-transform"
             title={`Click to read "${mainBook.title}"`}
             aria-label={`Read "${mainBook.title}"`}
           >
@@ -91,7 +95,9 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
             <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full">
               <Link
                 href={`/read/${mainBook.id}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] transition-colors shadow-xs text-center whitespace-nowrap"
+                prefetch={true}
+                onClick={() => soundManager.playBookOpen()}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all shadow-xs text-center whitespace-nowrap cursor-pointer"
               >
                 <BookOpen className="w-4 h-4 shrink-0" />
                 <span>
@@ -120,7 +126,8 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
               key={b.id}
               href={`/read/${b.id}`}
               prefetch={true}
-              className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] transition-all flex items-center gap-3.5 sm:gap-4 group"
+              onClick={() => soundManager.playBookOpen()}
+              className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] active:scale-[0.99] transition-all flex items-center gap-3.5 sm:gap-4 group cursor-pointer"
               title={`Click to read "${b.title}"`}
             >
               <div className="relative w-14 sm:w-16 aspect-[2/3] shrink-0 rounded-lg overflow-hidden book-cover-shadow book-spine">
@@ -141,6 +148,12 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
                   <span>•</span>
                   <span>{b.accessType === "FREE" ? "Free" : `₹${b.price || 199}`}</span>
                 </div>
+              </div>
+
+              {/* Dedicated Read Button */}
+              <div className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-[11px] font-bold flex items-center gap-1 shadow-xs group-hover:bg-[var(--primary-hover)] transition-colors">
+                <BookOpen className="w-3 h-3" />
+                <span>Read</span>
               </div>
             </Link>
           ))}

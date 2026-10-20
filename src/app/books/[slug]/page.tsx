@@ -208,7 +208,14 @@ export default function BookDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
             {/* Left Cover Column */}
             <div className="md:col-span-4 flex flex-col items-center">
-              <div className="relative w-64 sm:w-72 aspect-[2/3] rounded-2xl overflow-hidden book-cover-shadow book-spine bg-[var(--card)] border border-black/5">
+              <Link
+                href={`/read/${book.id}`}
+                prefetch={true}
+                onClick={() => soundManager.playBookOpen()}
+                className="relative w-64 sm:w-72 aspect-[2/3] rounded-2xl overflow-hidden book-cover-shadow book-spine bg-[var(--card)] border border-black/5 cursor-pointer block active:scale-[0.99] transition-transform"
+                title={`Click to read "${book.title}"`}
+                aria-label={`Read "${book.title}"`}
+              >
                 <Image
                   src={book.coverUrl}
                   alt={book.title}
@@ -217,7 +224,7 @@ export default function BookDetailPage() {
                   className="object-cover"
                   sizes="(max-width: 768px) 260px, 320px"
                 />
-              </div>
+              </Link>
 
               {/* Cover badges */}
               <div className="mt-4 flex items-center gap-3">
