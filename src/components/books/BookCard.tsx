@@ -128,11 +128,6 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
           </div>
         )}
 
-        {/* Floating Read indicator badge on cover */}
-        <div className="sm:hidden absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold shadow-md flex items-center gap-1.5 backdrop-blur-md z-10 pointer-events-none select-none">
-          <BookOpen className="w-3 h-3" />
-          <span>Read</span>
-        </div>
 
         {/* Desktop Quick Action Buttons (Reveals on Hover) */}
         <div className="hidden sm:flex absolute bottom-3 left-3 right-3 items-center justify-between gap-2 opacity-0 translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300 z-20 pointer-events-none sm:group-hover:pointer-events-auto">
