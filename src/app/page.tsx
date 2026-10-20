@@ -24,15 +24,64 @@ async function getBooks(): Promise<Book[]> {
   try {
     const books = await prisma.book.findMany({
       where: { status: "PUBLISHED" },
-      include: {
-        chapters: { orderBy: { order: "asc" } },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        author: true,
+        description: true,
+        coverPath: true,
+        filePath: true,
+        fileName: true,
+        mimeType: true,
+        fileSize: true,
+        format: true,
+        isbn: true,
+        language: true,
+        publisher: true,
+        publicationDate: true,
+        pages: true,
+        featured: true,
+        trending: true,
+        popular: true,
+        status: true,
+        rating: true,
+        readCount: true,
+        ratingCount: true,
+        accessType: true,
+        price: true,
+        originalPrice: true,
+        discount: true,
+        currency: true,
+        previewType: true,
+        previewPages: true,
+        previewPercentage: true,
+        previewChapters: true,
+        watermarkEnabled: true,
+        sampleContent: true,
+        allowDownload: true,
+        allowPrint: true,
+        allowCopy: true,
+        tags: true,
+        categoryId: true,
+        categoryName: true,
+        createdAt: true,
+        updatedAt: true,
+        chapters: {
+          select: {
+            id: true,
+            title: true,
+            page: true,
+          },
+          orderBy: { order: "asc" },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
 
     if (books.length === 0) return MOCK_BOOKS;
 
-    return books.map((b) => ({
+    return books.map((b: any) => ({
       ...b,
       isbn: b.isbn || undefined,
       publisher: b.publisher || undefined,
@@ -43,6 +92,7 @@ async function getBooks(): Promise<Book[]> {
       fileUrl: b.filePath || undefined,
       fileSize: b.fileSize ?? undefined,
       sampleContent: b.sampleContent || undefined,
+      ratingCount: b.ratingCount || 1,
       tags: JSON.parse(b.tags || "[]"),
       accessType: b.accessType as any,
       price: b.price,
@@ -52,13 +102,12 @@ async function getBooks(): Promise<Book[]> {
       previewType: b.previewType as any,
       previewPages: b.previewPages,
       format: (b.format || "interactive").toLowerCase() as any,
-      chapters: b.chapters.map((ch) => ({
+      chapters: b.chapters.map((ch: any) => ({
         id: ch.id,
         title: ch.title,
         page: ch.page,
-        content: ch.content || undefined,
       })),
-      tableOfContents: b.chapters.map((ch) => ({
+      tableOfContents: b.chapters.map((ch: any) => ({
         title: ch.title,
         page: ch.page,
       })),

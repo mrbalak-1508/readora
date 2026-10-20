@@ -34,10 +34,19 @@ export async function GET(request: Request) {
       ];
     }
 
+    const includeContent = searchParams.get("includeContent") === "true";
+
     const books = await prisma.book.findMany({
       where,
       include: {
         chapters: {
+          select: {
+            id: true,
+            title: true,
+            page: true,
+            order: true,
+            content: includeContent,
+          },
           orderBy: { order: "asc" },
         },
       },
@@ -62,19 +71,23 @@ export async function GET(request: Request) {
       previewPercentage: b.previewPercentage ?? 15,
       previewChapters: b.previewChapters ?? 2,
       watermarkEnabled: b.watermarkEnabled ?? true,
-      chapters: b.chapters.map((ch) => ({
+      chapters: b.chapters.map((ch: any) => ({
         id: ch.id,
         title: ch.title,
         page: ch.page,
-        content: ch.content,
+        content: ch.content || undefined,
       })),
-      tableOfContents: b.chapters.map((ch) => ({
+      tableOfContents: b.chapters.map((ch: any) => ({
         title: ch.title,
         page: ch.page,
       })),
     }));
 
-    return NextResponse.json(formatted);
+    return NextResponse.json(formatted, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    });
   } catch (error) {
     console.error("Prisma SQLite fetch error, fallback to memory:", error);
     return NextResponse.json(MOCK_BOOKS);

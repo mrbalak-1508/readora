@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  compress: true,
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "clsx", "tailwind-merge"],
+  },
   outputFileTracingIncludes: {
     "/api/**/*": ["./storage/**/*"],
   },

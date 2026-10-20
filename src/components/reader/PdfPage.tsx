@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { getPdfDocument } from "@/lib/pdf/pdfjs";
+import { getPdfDocument, getPdfjs } from "@/lib/pdf/pdfjs";
 import { pageCache } from "@/lib/reader/pageCache";
 import { useReader } from "@/context/ReaderContext";
 import { Highlight } from "@/lib/types";
@@ -224,8 +224,8 @@ export const PdfPage = React.memo(function PdfPage({
         }
         const effectiveFitScale = fitScale * scale;
 
-        // High-DPI crisp Retina scaling (at least 2.0x for razor sharp typography)
-        const dpr = typeof window !== "undefined" ? Math.max(window.devicePixelRatio || 1, 2.0) : 2.0;
+        // High-DPI crisp Retina scaling: safely clamped between 1.25 and 2.0 to balance razor sharpness with GPU memory & speed
+        const dpr = typeof window !== "undefined" ? Math.min(Math.max(window.devicePixelRatio || 1, 1.25), 2.0) : 1.5;
         const viewport = page.getViewport({ scale: effectiveFitScale * dpr });
         const cssViewport = page.getViewport({ scale: effectiveFitScale });
 
@@ -262,14 +262,20 @@ export const PdfPage = React.memo(function PdfPage({
           aspectRatio: originalAspect,
         });
 
-        // Render PDF.js TextLayer over the rendered canvas for selectable, highlightable text
-        const textLayerContainer = textLayerRef.current;
-        if (textLayerContainer && !signal?.aborted) {
-          textLayerContainer.innerHTML = "";
+        // Mark canvas rendered immediately for instant visual feedback
+        if (!signal?.aborted) {
+          hasRenderedRef.current = true;
+          setLoading(false);
+        }
+
+        // Render PDF.js TextLayer non-blockingly so initial page visual is instantaneous
+        setTimeout(async () => {
+          if (signal?.aborted || !textLayerRef.current) return;
           try {
-            const pdfjs = await import("pdfjs-dist");
+            const pdfjs = await getPdfjs();
             const textContent = await page.getTextContent();
             if (!signal?.aborted && textLayerRef.current) {
+              textLayerRef.current.innerHTML = "";
               const textLayer = new (pdfjs as any).TextLayer({
                 textContentSource: textContent,
                 container: textLayerRef.current,
@@ -281,12 +287,7 @@ export const PdfPage = React.memo(function PdfPage({
           } catch (textErr: any) {
             console.debug("TextLayer render notice (canvas unaffected):", textErr?.message);
           }
-        }
-
-        if (!signal?.aborted) {
-          hasRenderedRef.current = true;
-          setLoading(false);
-        }
+        }, 0);
       } catch (err: any) {
         if (
           err?.name === "RenderingCancelledException" ||

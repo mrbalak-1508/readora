@@ -78,7 +78,7 @@ export function ContinueReadingSection() {
 
           {/* Action Button */}
           <Link
-            href={`/reader/${current.bookId}`}
+            href={`/read/${current.bookId}`}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-hover)] transition-colors shadow-sm shrink-0"
           >
             <BookOpen className="w-3.5 h-3.5" />

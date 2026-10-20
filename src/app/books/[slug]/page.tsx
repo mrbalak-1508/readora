@@ -52,18 +52,22 @@ export default function BookDetailPage() {
       setLoading(true);
 
       try {
-        // Fetch book data
-        const res = await fetch("/api/books");
+        // Fetch book data directly by slug or ID
+        const res = await fetch(`/api/books/${slug}`);
         if (res.ok) {
-          const allBooks: Book[] = await res.json();
-          const found = allBooks.find((b) => b.slug === slug || b.id === slug);
+          const found: Book = await res.json();
           if (found) {
             setBook(found);
             setInLibrary(store.isInLibrary(found.id));
-            const related = allBooks.filter(
-              (b) => b.id !== found.id && (b.categoryId === found.categoryId || b.language === found.language)
-            );
-            setRelatedBooks(related.slice(0, 5));
+
+            // Fetch related books asynchronously without blocking main book render
+            fetch(`/api/books?category=${encodeURIComponent(found.categoryId || "all")}`)
+              .then((r) => (r.ok ? r.json() : []))
+              .then((catBooks: Book[]) => {
+                const related = catBooks.filter((b) => b.id !== found.id);
+                setRelatedBooks(related.slice(0, 5));
+              })
+              .catch(() => {});
 
             // Check server-side access entitlement
             try {

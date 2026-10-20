@@ -75,6 +75,8 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isProgrammaticScrollRef = useRef(false);
+  const isUserScrollingRef = useRef(false);
+  const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Monitor container dimensions for responsive canvas sizing
@@ -117,7 +119,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
       });
   }, [book?.id, book?.fileUrl, setTotalPages]);
 
-  // Smooth vertical scroll to target page
+  // Smooth vertical scroll to target page (programmatic: toolbar, TOC, bookmarks)
   const scrollToPage = useCallback(
     (targetPage: number, smooth: boolean = true) => {
       const clamped = Math.max(1, Math.min(targetPage, totalPages));
@@ -126,6 +128,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
       const targetEl = document.getElementById(`pdf-page-${clamped}`);
       if (targetEl && containerRef.current) {
         isProgrammaticScrollRef.current = true;
+        isUserScrollingRef.current = false;
         targetEl.scrollIntoView({
           behavior: smooth ? "smooth" : "auto",
           block: "start",
@@ -138,9 +141,9 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
     [totalPages, goToPage]
   );
 
-  // Scroll to active page when changed from outside
+  // Scroll to active page only when triggered from outside (TOC/Toolbar), NOT when user is actively scrolling
   useEffect(() => {
-    if (isProgrammaticScrollRef.current || isDraggingRef.current) return;
+    if (isProgrammaticScrollRef.current || isDraggingRef.current || isUserScrollingRef.current) return;
     const targetEl = document.getElementById(`pdf-page-${currentPage}`);
     if (targetEl && containerRef.current) {
       const containerRect = containerRef.current.getBoundingClientRect();
@@ -150,6 +153,17 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
       }
     }
   }, [currentPage]);
+
+  // Handle user scrolling container to flag manual scroll activity
+  const handleContainerScroll = useCallback(() => {
+    isUserScrollingRef.current = true;
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    userScrollTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, 350);
+  }, []);
 
   // IntersectionObserver to sync active page number during vertical scroll
   useEffect(() => {
@@ -173,6 +187,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
           if (match) {
             const pageNum = parseInt(match[1], 10);
             if (pageNum && pageNum !== currentPage) {
+              isUserScrollingRef.current = true;
               goToPage?.(pageNum);
             }
           }
@@ -274,13 +289,26 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
     return undefined;
   }, [containerHeight, fitMode, zoom]);
 
-  // Virtualization window: render active canvas near current page
-  const shouldRenderPageCanvas = useCallback(
-    (pgNum: number) => {
-      return Math.abs(pgNum - currentPage) <= 2;
-    },
-    [currentPage]
-  );
+  // Active render window with hysteresis to eliminate canvas remount thrashing on scroll
+  const [renderedPages, setRenderedPages] = useState<Set<number>>(() => new Set([1, 2, 3]));
+
+  useEffect(() => {
+    setRenderedPages((prev) => {
+      const next = new Set<number>();
+      const minWindow = Math.max(1, currentPage - 2);
+      const maxWindow = Math.min(totalPages, currentPage + 2);
+      for (let i = minWindow; i <= maxWindow; i++) {
+        next.add(i);
+      }
+      // Retain already-rendered pages within a comfortable radius (+/- 4) to prevent thrashing
+      for (const p of prev) {
+        if (Math.abs(p - currentPage) <= 4 && p <= totalPages) {
+          next.add(p);
+        }
+      }
+      return next;
+    });
+  }, [currentPage, totalPages]);
 
   // Render all pages in continuous vertical scroll mode
   const pageList = useMemo(() => {
@@ -450,6 +478,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
       {/* Main Specialized Reading Canvas - Supports Natural Horizontal & Vertical Pan */}
       <div
         ref={containerRef}
+        onScroll={handleContainerScroll}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         className={`flex-1 overflow-auto p-0 sm:p-4 md:p-6 flex flex-col relative overscroll-contain transition-colors ${
@@ -520,7 +549,7 @@ export function PdfReader({ onUnlockRequest, onOpenToc }: PdfReaderProps) {
             }}
           >
             {pageList.map((pgNum) => {
-              const isRendered = shouldRenderPageCanvas(pgNum);
+              const isRendered = renderedPages.has(pgNum);
 
               return (
                 <div

@@ -109,17 +109,14 @@ export async function GET(
       return NextResponse.json({ error: "Book file is empty (0 bytes)" }, { status: 422 });
     }
 
-    // CRITICAL: When serving in-browser reader streams, provide JSON Base64 payload.
-    // Download managers (IDM, Free Download Manager) intercept binary/PDF downloads,
-    // hijack the file onto disk, and return 204 No Content to the browser.
-    // Serving via application/json guarantees that IDM NEVER intercepts the stream.
-    const isReaderStream =
-      request.nextUrl.searchParams.get("stream") === "reader" ||
+    // Check if client explicitly requests JSON Base64 payload.
+    // Base64 is only used when specifically asked via format=base64.
+    const wantsBase64 =
       request.nextUrl.searchParams.get("format") === "base64" ||
-      request.headers.get("accept")?.includes("application/json") ||
-      request.headers.get("x-readora-reader") === "1";
+      (request.headers.get("accept")?.includes("application/json") &&
+        !request.headers.get("accept")?.includes("application/octet-stream"));
 
-    if (isReaderStream && !isExplicitDownload) {
+    if (wantsBase64 && !isExplicitDownload) {
       const base64Data = fileBuffer.toString("base64");
       return NextResponse.json({
         success: true,
@@ -133,9 +130,8 @@ export async function GET(
       }, {
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          "Cache-Control": "private, max-age=3600, stale-while-revalidate=86400",
           "X-Content-Type-Options": "nosniff",
-          "Pragma": "no-cache",
         },
       });
     }
@@ -147,14 +143,28 @@ export async function GET(
     const filename = book.fileName || `${book.title}.pdf`;
     const totalSize = fileBuffer.length;
 
+    // Fast ETag check for client browser cache
+    const etag = `"${book.id}-${totalSize}"`;
+    if (!isExplicitDownload && request.headers.get("if-none-match") === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, max-age=3600, stale-while-revalidate=86400",
+        },
+      });
+    }
+
     const responseHeaders: Record<string, string> = {
       "Content-Type": contentType,
       "Accept-Ranges": "bytes",
       "Content-Length": totalSize.toString(),
       "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "private, no-cache, no-store, must-revalidate",
+      "Cache-Control": isExplicitDownload
+        ? "private, no-cache, no-store, must-revalidate"
+        : "private, max-age=3600, stale-while-revalidate=86400",
       "X-Content-Type-Options": "nosniff",
-      "Pragma": "no-cache",
+      ETag: etag,
     };
 
     if (isExplicitDownload) {

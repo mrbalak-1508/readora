@@ -7,8 +7,25 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 // Document promise cache by bookId
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>();
 
+let cachedPdfjs: typeof import("pdfjs-dist") | null = null;
+
 /**
- * Configure worker & CMaps, and load the PDF document.
+ * Return singleton pdfjs module instance and configure worker once
+ */
+export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
+  if (!cachedPdfjs) {
+    cachedPdfjs = await import("pdfjs-dist");
+    const version = cachedPdfjs.version || "6.4.299";
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    if (typeof window !== "undefined") {
+      cachedPdfjs.GlobalWorkerOptions.workerSrc = `${origin}/pdf.worker.${version}.min.mjs`;
+    }
+  }
+  return cachedPdfjs;
+}
+
+/**
+ * Configure worker & CMaps, and load the PDF document with zero UI hang.
  */
 export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uint8Array): Promise<PDFDocumentProxy> {
   const cached = documentCache.get(bookId);
@@ -17,14 +34,10 @@ export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uin
   }
 
   const promise = (async () => {
-    const pdfjs = await import("pdfjs-dist");
+    const pdfjs = await getPdfjs();
 
     const version = pdfjs.version || "6.4.299";
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (typeof window !== "undefined") {
-      pdfjs.GlobalWorkerOptions.workerSrc = `${origin}/pdf.worker.${version}.min.mjs`;
-    }
-
     const cMapUrl = origin ? `${origin}/cmaps/` : `https://unpkg.com/pdfjs-dist@${version}/cmaps/`;
     const standardFontDataUrl = origin ? `${origin}/standard_fonts/` : `https://unpkg.com/pdfjs-dist@${version}/standard_fonts/`;
 
@@ -44,17 +57,14 @@ export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uin
     // Default source URL
     const url = typeof pdfUrlOrData === "string" ? pdfUrlOrData : `/api/files/books/${bookId}`;
 
-    // Strategy 1: Fetch as JSON Base64 payload.
-    // Download managers (IDM, Free Download Manager) intercept binary/PDF downloads,
-    // hijack the file onto disk, and return 204 No Content to the browser.
-    // Fetching via application/json guarantees that IDM NEVER intercepts the stream.
     try {
+      // 1. High-Performance Direct Binary Stream
+      // Streams raw ArrayBuffer directly into PDF.js WebAssembly core without Base64 overhead or string loops
       const separator = url.includes("?") ? "&" : "?";
-      const requestUrl = `${url}${separator}stream=reader&format=base64&_t=${Date.now()}`;
+      const requestUrl = `${url}${separator}stream=reader&format=binary`;
       const res = await fetch(requestUrl, {
-        cache: "no-store",
         headers: {
-          Accept: "application/json",
+          Accept: "application/octet-stream, */*",
           "X-Readora-Reader": "1",
         },
       });
@@ -72,30 +82,29 @@ export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uin
         throw new Error(errorMsg);
       }
 
-      // Check if JSON Base64 payload received (immune to download managers)
       const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const payload = await res.json();
-        if (payload?.data) {
-          const binaryStr = atob(payload.data);
-          const len = binaryStr.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = binaryStr.charCodeAt(i);
-          }
+
+      // Path A: Raw binary response (instant, 0% CPU decoding)
+      if (!contentType.includes("application/json")) {
+        const buffer = await res.arrayBuffer();
+        if (buffer && buffer.byteLength > 0) {
           const task = pdfjs.getDocument({
-            data: bytes,
+            data: new Uint8Array(buffer),
             cMapUrl,
             cMapPacked: true,
             standardFontDataUrl,
           });
           return await task.promise;
+        } else {
+          throw new Error("Received empty manuscript content (0 bytes).");
         }
       }
 
-      // Fallback: Direct binary response
-      const buffer = await res.arrayBuffer();
-      if (buffer && buffer.byteLength > 0) {
+      // Path B: Base64 JSON fallback - decoded via native browser C++ pipeline without freezing main thread
+      const payload = await res.json();
+      if (payload?.data) {
+        const blobRes = await fetch(`data:application/pdf;base64,${payload.data}`);
+        const buffer = await blobRes.arrayBuffer();
         const task = pdfjs.getDocument({
           data: new Uint8Array(buffer),
           cMapUrl,
@@ -103,9 +112,9 @@ export async function getPdfDocument(bookId: string, pdfUrlOrData?: string | Uin
           standardFontDataUrl,
         });
         return await task.promise;
-      } else {
-        throw new Error("Received empty manuscript content (0 bytes).");
       }
+
+      throw new Error("Invalid document stream response from server.");
     } catch (fetchErr: any) {
       throw fetchErr;
     }

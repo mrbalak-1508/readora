@@ -59,10 +59,10 @@ export function EpubReader({ onUnlockRequest, onOpenToc }: EpubReaderProps) {
         const ePub = (await import("epubjs")).default;
         if (isCancelled) return;
 
-        // Fetch the EPUB file as JSON Base64 or arraybuffer
-        const epubUrl = `/api/files/books/${book.id}?stream=reader&format=base64&_t=${Date.now()}`;
+        // Fetch the EPUB file as direct binary arraybuffer
+        const epubUrl = `/api/files/books/${book.id}?stream=reader&format=binary`;
         const res = await fetch(epubUrl, {
-          headers: { Accept: "application/json", "X-Readora-Reader": "1" },
+          headers: { Accept: "application/octet-stream, */*", "X-Readora-Reader": "1" },
         });
         if (!res.ok) throw new Error("Could not load EPUB manuscript.");
         if (isCancelled) return;
@@ -71,13 +71,12 @@ export function EpubReader({ onUnlockRequest, onOpenToc }: EpubReaderProps) {
         const contentType = res.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           const payload = await res.json();
-          const binaryStr = atob(payload.data);
-          const len = binaryStr.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = binaryStr.charCodeAt(i);
+          if (payload?.data) {
+            const blobRes = await fetch(`data:application/epub+zip;base64,${payload.data}`);
+            buffer = await blobRes.arrayBuffer();
+          } else {
+            throw new Error("Invalid EPUB data from server");
           }
-          buffer = bytes.buffer;
         } else {
           buffer = await res.arrayBuffer();
         }

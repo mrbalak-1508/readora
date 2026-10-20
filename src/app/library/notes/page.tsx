@@ -108,7 +108,7 @@ export default function NotesPage() {
                     {book && (
                       <div className="pt-2 flex justify-end">
                         <Link
-                          href={`/reader/${book.id}?page=${item.page}`}
+                          href={`/read/${book.id}?page=${item.page}`}
                           className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline font-medium"
                         >
                           <BookOpen className="w-3.5 h-3.5" />
