@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Book } from "@/lib/types";
 import { BookOpen, Star, ArrowRight, Sparkles } from "lucide-react";
 import { soundManager } from "@/lib/sound";
@@ -12,10 +13,24 @@ interface FeaturedSectionProps {
 }
 
 export function FeaturedSection({ books }: FeaturedSectionProps) {
+  const router = useRouter();
   if (books.length === 0) return null;
 
   const mainBook = books.find((b) => b.featured) || books[0];
   const secondaryBooks = books.filter((b) => b.id !== mainBook.id).slice(0, 3);
+
+  const openReader = (bookId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    soundManager.playBookOpen();
+    try {
+      router.push(`/read/${bookId}`);
+    } catch {
+      window.location.assign(`/read/${bookId}`);
+    }
+  };
 
   return (
     <section className="mb-20">
@@ -48,7 +63,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
           <Link
             href={`/read/${mainBook.id}`}
             prefetch={true}
-            onClick={() => soundManager.playBookOpen()}
+            onClick={(e) => openReader(mainBook.id, e)}
             className="relative w-44 sm:w-56 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden book-cover-shadow book-spine group cursor-pointer active:scale-[0.98] transition-transform"
             title={`Click to read "${mainBook.title}"`}
             aria-label={`Read "${mainBook.title}"`}
@@ -96,7 +111,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
               <Link
                 href={`/read/${mainBook.id}`}
                 prefetch={true}
-                onClick={() => soundManager.playBookOpen()}
+                onClick={(e) => openReader(mainBook.id, e)}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[var(--primary)] text-white text-xs sm:text-sm font-bold hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all shadow-xs text-center whitespace-nowrap cursor-pointer"
               >
                 <BookOpen className="w-4 h-4 shrink-0" />
@@ -126,7 +141,7 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
               key={b.id}
               href={`/read/${b.id}`}
               prefetch={true}
-              onClick={() => soundManager.playBookOpen()}
+              onClick={(e) => openReader(b.id, e)}
               className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] active:scale-[0.99] transition-all flex items-center gap-3.5 sm:gap-4 group cursor-pointer"
               title={`Click to read "${b.title}"`}
             >

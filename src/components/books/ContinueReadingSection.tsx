@@ -3,11 +3,14 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { store } from "@/lib/data/storage";
+import { soundManager } from "@/lib/sound";
 import { ReadingProgress } from "@/lib/types";
 
 export function ContinueReadingSection() {
+  const router = useRouter();
   const [activeProgress, setActiveProgress] = useState<ReadingProgress[]>([]);
 
   useEffect(() => {
@@ -79,7 +82,9 @@ export function ContinueReadingSection() {
           {/* Action Button */}
           <Link
             href={`/read/${current.bookId}`}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-hover)] transition-colors shadow-sm shrink-0"
+            prefetch={true}
+            onClick={() => soundManager.playBookOpen()}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-hover)] active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer"
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Continue Reading</span>
