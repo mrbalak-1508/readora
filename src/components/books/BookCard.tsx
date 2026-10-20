@@ -59,11 +59,16 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
     <div id="tour-book-card" className="group relative flex flex-col">
       {/* Book Cover Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-[var(--bg-subtle)] book-cover-shadow book-spine transition-transform duration-300 ease-out group-hover:-translate-y-1.5">
-        {/* Cover Link */}
+        {/* Cover Link: 1-Click Direct Reading */}
         <Link
-          href={`/books/${book.slug}`}
+          href={`/read/${book.id}`}
+          prefetch={true}
+          onClick={() => {
+            soundManager.playBookOpen();
+          }}
           className="absolute inset-0 z-0 block cursor-pointer"
-          aria-label={book.title}
+          aria-label={`Read "${book.title}"`}
+          title={`Click to read "${book.title}"`}
         >
           <Image
             src={book.coverUrl}
@@ -78,10 +83,11 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </Link>
 
-        {/* Hover Quick Action Buttons */}
+        {/* Quick Action Buttons (Read & Save) */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-10 pointer-events-auto">
           <Link
             href={`/read/${book.id}`}
+            prefetch={true}
             onClick={() => {
               soundManager.playBookOpen();
             }}
@@ -89,6 +95,15 @@ export function BookCard({ book, progress, priority = false }: BookCardProps) {
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Read</span>
+          </Link>
+
+          <Link
+            href={`/books/${book.slug}`}
+            className="p-1.5 rounded-lg bg-white/95 text-[var(--foreground)] hover:bg-white backdrop-blur-sm shadow-lg transition-all"
+            title="View Synopsis & Details"
+            aria-label="View Details"
+          >
+            <span className="text-[10px] font-bold px-0.5">Info</span>
           </Link>
 
           <button

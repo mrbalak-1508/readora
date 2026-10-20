@@ -529,6 +529,7 @@ class SoundService {
     } catch {}
   }
 
+
   // Completion fanfare: warm acoustic harmonic chime
   public playComplete() {
     this.playCompletion();

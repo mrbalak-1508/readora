@@ -41,10 +41,13 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         {/* Main Large Featured Layout */}
         <div className="lg:col-span-8 rounded-2xl sm:rounded-3xl border border-[var(--border)] bg-[var(--card)] p-4 sm:p-8 flex flex-col sm:flex-row gap-6 sm:gap-8 items-center book-cover-shadow overflow-hidden max-w-full">
-          {/* Main Book Cover */}
+          {/* Main Book Cover: 1-Click Reading */}
           <Link
-            href={`/books/${mainBook.slug}`}
+            href={`/read/${mainBook.id}`}
+            prefetch={true}
             className="relative w-44 sm:w-56 aspect-[2/3] shrink-0 rounded-2xl overflow-hidden book-cover-shadow book-spine group cursor-pointer"
+            title={`Click to read "${mainBook.title}"`}
+            aria-label={`Read "${mainBook.title}"`}
           >
             <Image
               src={mainBook.coverUrl}
@@ -115,8 +118,10 @@ export function FeaturedSection({ books }: FeaturedSectionProps) {
           {secondaryBooks.map((b) => (
             <Link
               key={b.id}
-              href={`/books/${b.slug}`}
+              href={`/read/${b.id}`}
+              prefetch={true}
               className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--bg-subtle)] transition-all flex items-center gap-3.5 sm:gap-4 group"
+              title={`Click to read "${b.title}"`}
             >
               <div className="relative w-14 sm:w-16 aspect-[2/3] shrink-0 rounded-lg overflow-hidden book-cover-shadow book-spine">
                 <Image src={b.coverUrl} alt={b.title} fill className="object-cover" sizes="64px" />

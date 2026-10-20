@@ -15,6 +15,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { Book } from "@/lib/types";
+import { soundManager } from "@/lib/sound";
 import { HowItWorksModal } from "./HowItWorksModal";
 
 interface BookHeroProps {
@@ -73,7 +74,7 @@ export function BookHero({ books }: BookHeroProps) {
       return { text: "Read Free Preview", href: `/read/${book.id}` };
     }
     if (book.price && book.price > 0) {
-      return { text: `Buy for ₹${book.price}`, href: `/books/${book.slug}` };
+      return { text: "Read Preview", href: `/read/${book.id}` };
     }
     return { text: "Read Book", href: `/read/${book.id}` };
   };
@@ -274,7 +275,13 @@ export function BookHero({ books }: BookHeroProps) {
                     transition={{ duration: 0.35 }}
                     className="relative w-44 sm:w-52 md:w-60 aspect-[2/3] rounded-2xl overflow-hidden book-cover-shadow book-spine bg-[var(--card)] border-2 border-white/60 z-20 group"
                   >
-                    <Link href={`/books/${currentBook?.slug}`}>
+                    <Link
+                      href={`/read/${currentBook?.id}`}
+                      prefetch={true}
+                      onClick={() => soundManager.playBookOpen()}
+                      title={`Click to read "${currentBook?.title}"`}
+                      aria-label={`Read "${currentBook?.title}"`}
+                    >
                       <Image
                         src={currentBook?.coverUrl || "/placeholder-cover.jpg"}
                         alt={currentBook?.title || "Book"}

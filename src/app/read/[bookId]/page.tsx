@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: PageProps) {
   try {
     const book = await prisma.book.findFirst({
       where: { OR: [{ id: bookId }, { slug: bookId }] },
+      select: { title: true, author: true },
     });
     if (book) {
       return {
